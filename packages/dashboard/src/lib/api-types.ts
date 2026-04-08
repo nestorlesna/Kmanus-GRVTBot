@@ -105,6 +105,22 @@ export interface RebateSummary {
   maxFee: number;
 }
 
+// Real grid_profit, computed by FIFO matching every fill in fills_archive.
+// Replaces the legacy bot.grid_profit_usdt column. Every value comes from
+// real GRVT fill data — no estimation.
+export interface RealizedSummary {
+  realizedPnl: number;   // Σ (sell_price - buy_price) * matched_size
+  totalFees: number;     // signed; negative = net rebate earned
+  netPnl: number;        // realizedPnl - totalFees (rebates increase net)
+  roundTrips: number;    // FIFO match count (a single SELL can produce many)
+  avgPerRT: number;
+  fillCount: number;
+  openSize: number;      // unmatched BUY lot size = currently open position
+  openCost: number;      // USDT spent on those open lots
+  firstFillAt: string | null;
+  lastFillAt: string | null;
+}
+
 export interface OrderRow {
   id: number;
   order_id: string;

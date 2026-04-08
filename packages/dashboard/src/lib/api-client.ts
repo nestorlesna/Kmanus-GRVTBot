@@ -17,6 +17,7 @@ import {
   type GridState,
   type HealthV2,
   type OrderRow,
+  type RealizedSummary,
   type RebateSummary,
   type Roundtrip,
   type Trade,
@@ -101,6 +102,9 @@ export const api = {
 
   getRebateSummary: (id: number) =>
     request<RebateSummary>(`/bots/${id}/rebate-summary`),
+
+  getRealizedSummary: (id: number) =>
+    request<RealizedSummary>(`/bots/${id}/realized-summary`),
 
   getOrders: (
     id: number,

@@ -38,6 +38,17 @@ export function OverviewPage() {
     staleTime: 5_000,
   });
 
+  // Real realized PnL via FIFO matching of fills_archive. Replaces the
+  // legacy bot.grid_profit_usdt (frozen since March). Single-bot in v0,
+  // so the global summary IS the realized for bot 42; when multi-bot
+  // lands we'll need a per-bot variant.
+  const realizedQuery = useQuery({
+    queryKey: ['realized-summary', 42],
+    queryFn: () => api.getRealizedSummary(42),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+
   // Live ticks per bot, keyed by id.
   const [ticks, setTicks] = useState<Record<number, BotTick>>({});
   // For now we only listen to bot:42; multi-bot WS subscription comes when
@@ -71,27 +82,36 @@ export function OverviewPage() {
   const bots = botsQuery.data?.bots ?? [];
 
   // Aggregate equity / pnl across all bots, preferring tick data when present.
-  let totalEquity = 0;
+  // Aggregate, source-of-truth-aware:
+  //   - invested:    bot.investment_usdt (immutable, set at creation)
+  //   - unrealized:  bot.trend_pnl_usdt or live tick (mark-to-market on
+  //                  the open position; the bot already computes this
+  //                  from the live ticker)
+  //   - realized:    FIFO sum from fills_archive, NET of fees, via the
+  //                  /realized-summary endpoint. Fallback to legacy
+  //                  bot.grid_profit_usdt only while the query is in
+  //                  flight so the card never blanks.
+  //   - totalPnl:    realized + unrealized (rebuilt from real numbers,
+  //                  NOT from the legacy bot.total_pnl_usdt which is
+  //                  stale because it stores grid_profit + trend_pnl)
+  //   - equity:      invested + totalPnl
   let totalInvested = 0;
-  let totalPnl = 0;
-  let totalRealized = 0;
   let totalUnrealized = 0;
   let runningCount = 0;
-
   for (const bot of bots) {
     const tick = ticks[bot.id];
     const status = tick?.status ?? bot.status;
-    const pnl = tick?.totalPnl ?? bot.total_pnl_usdt;
-    const realized = tick?.gridProfit ?? bot.grid_profit_usdt;
     const unrealized = tick?.trendPnl ?? bot.trend_pnl_usdt;
     totalInvested += bot.investment_usdt;
-    totalEquity += bot.investment_usdt + pnl;
-    totalPnl += pnl;
-    totalRealized += realized;
     totalUnrealized += unrealized;
     if (status === 'running') runningCount++;
   }
 
+  const totalRealized =
+    realizedQuery.data?.netPnl ??
+    bots.reduce((acc, b) => acc + b.grid_profit_usdt, 0);
+  const totalPnl = totalRealized + totalUnrealized;
+  const totalEquity = totalInvested + totalPnl;
   const totalPct = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
 
   return (

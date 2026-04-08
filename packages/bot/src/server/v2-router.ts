@@ -355,6 +355,106 @@ export function createV2Router(deps: V2RouterDeps): Router {
     return;
   }));
 
+  // ── GET /api/v2/bots/:id/realized-summary ─────────────────────────
+  // Real grid_profit, computed by FIFO matching every fill in
+  // fills_archive. This REPLACES the legacy bot.grid_profit_usdt
+  // column (which was populated from a frozen `paired_roundtrips`
+  // table that hasn't been updated since March). Every value is
+  // derived from real GRVT fills — no estimation, no heuristic
+  // grid-level pairing.
+  //
+  // Convention:
+  //   realizedPnl = Σ (sell_price - buy_price) * matched_size
+  //   totalFees   = Σ fee  (signed; negative = net rebate earned)
+  //   netPnl      = realizedPnl - totalFees
+  //                 (subtracting because positive fee = paid; negative
+  //                  fee = earned, which INCREASES net PnL)
+  //   roundTrips  = number of FIFO matches (a single SELL can split
+  //                 across multiple BUY lots and count as multiple
+  //                 round trips)
+  //   openSize    = base-currency size still in unmatched BUY lots
+  //                 (the currently-open position)
+  //   openCost    = USDT spent on those open lots (avg = openCost/openSize)
+  //
+  // The cost of FIFO over ~1k fills is microseconds — fine to compute
+  // on every request, but the dashboard caches with TanStack Query
+  // staleTime so it does not hammer the endpoint.
+  router.get('/bots/:id/realized-summary', asyncHandler(async (req, res) => {
+    const id = parseInt(String(req.params.id ?? ''), 10);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'invalid bot id' });
+    void id; // fills_archive is global in v0; ignored until multi-bot migration
+
+    const fills = await dbAll<{
+      is_buyer: number;
+      price: number;
+      size: number;
+      fee: number;
+      event_time: string;
+    }>(db, `
+      SELECT is_buyer, price, size, fee, event_time
+      FROM fills_archive
+      ORDER BY event_time ASC
+    `);
+
+    if (fills.length === 0) {
+      res.json({
+        realizedPnl: 0,
+        totalFees: 0,
+        netPnl: 0,
+        roundTrips: 0,
+        avgPerRT: 0,
+        fillCount: 0,
+        openSize: 0,
+        openCost: 0,
+        firstFillAt: null,
+        lastFillAt: null,
+      });
+      return;
+    }
+
+    // FIFO: walk fills oldest→newest, queue BUY lots, consume on SELL.
+    const lots: Array<{ price: number; qty: number }> = [];
+    let realizedPnl = 0;
+    let totalFees = 0;
+    let roundTrips = 0;
+    const EPS = 1e-9;
+
+    for (const f of fills) {
+      totalFees += f.fee;
+      if (f.is_buyer === 1) {
+        lots.push({ price: f.price, qty: f.size });
+        continue;
+      }
+      let remaining = f.size;
+      while (remaining > EPS && lots.length > 0) {
+        const lot = lots[0]!;
+        const matched = Math.min(lot.qty, remaining);
+        realizedPnl += (f.price - lot.price) * matched;
+        roundTrips++;
+        lot.qty -= matched;
+        remaining -= matched;
+        if (lot.qty <= EPS) lots.shift();
+      }
+    }
+
+    const openSize = lots.reduce((acc, l) => acc + l.qty, 0);
+    const openCost = lots.reduce((acc, l) => acc + l.qty * l.price, 0);
+
+    res.json({
+      realizedPnl,
+      totalFees,
+      netPnl: realizedPnl - totalFees,
+      roundTrips,
+      avgPerRT: roundTrips > 0 ? realizedPnl / roundTrips : 0,
+      fillCount: fills.length,
+      openSize,
+      openCost,
+      firstFillAt: fills[0]!.event_time,
+      lastFillAt: fills[fills.length - 1]!.event_time,
+    });
+    return;
+  }));
+
   // ── GET /api/v2/bots/:id/orders ───────────────────────────────────
   // Local DB orders (the GRVT live open orders are surfaced via grid-state).
   // The orders table can be SQLITE_CORRUPT on legacy databases — we wrap
