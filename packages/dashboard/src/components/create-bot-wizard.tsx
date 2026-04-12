@@ -21,6 +21,7 @@ import { Button } from './primitives/button';
 import { Input } from './primitives/input';
 import { Mono } from './primitives/mono';
 import { api } from '@/lib/api-client';
+import { RangePickerChart } from './charts/range-picker-chart';
 import {
   formatPercent,
   formatPnl,
@@ -380,6 +381,16 @@ function StepRange({
         trade less often but are safer; narrow ranges fill faster but exit the
         range sooner.
       </p>
+
+      {/* E.8: Interactive chart with draggable range lines */}
+      <RangePickerChart
+        pair={state.pair}
+        lower={lo || 0}
+        upper={hi || 0}
+        onLowerChange={(v) => update('lower', v.toFixed(2))}
+        onUpperChange={(v) => update('upper', v.toFixed(2))}
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <Input
           label="Lower price (USDT)"

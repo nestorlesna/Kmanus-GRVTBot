@@ -3,7 +3,7 @@
 // the focused list view for when you only want bot cards.
 
 import { useQuery } from '@tanstack/react-query';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { Button } from '@/components/primitives/button';
@@ -27,6 +27,13 @@ export function BotsListPage() {
   // doesn't need a global hardcoded bot:N channel.
 
   const [wizardOpen, setWizardOpen] = useState(false);
+
+  // E.2: listen for keyboard shortcut `n b` dispatched from AppShell
+  useEffect(() => {
+    const handler = () => setWizardOpen(true);
+    window.addEventListener('wizard:open', handler);
+    return () => window.removeEventListener('wizard:open', handler);
+  }, []);
 
   if (botsQuery.isPending) {
     return (

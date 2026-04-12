@@ -7,6 +7,8 @@ import { useParams } from 'react-router-dom';
 import { Pause, Play, SlidersHorizontal, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
+import { LiqGauge } from '@/components/charts/liq-gauge';
+import { FillHeatmap } from '@/components/charts/fill-heatmap';
 import type {
   DailySnapshot,
   FillRow,
@@ -475,6 +477,15 @@ export function BotDetailPage() {
         />
       </div>
 
+      {/* E.1: Liquidation distance gauge */}
+      {bot.liquidation_price != null && bot.liquidation_price > 0 && markPrice != null && (
+        <LiqGauge
+          markPrice={markPrice}
+          liqPrice={bot.liquidation_price}
+          direction={bot.direction}
+        />
+      )}
+
       {/* GridChart hero */}
       <Card className="p-0 overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-border-subtle">
@@ -488,7 +499,7 @@ export function BotDetailPage() {
           </div>
           <ChartLegend />
         </div>
-        <div className="h-[480px] md:h-[560px]">
+        <div className="h-[320px] sm:h-[420px] md:h-[560px]">
           {candlesQuery.isPending ? (
             <ChartSkeleton message="Loading candles…" />
           ) : candlesQuery.isError ? (
@@ -519,6 +530,21 @@ export function BotDetailPage() {
         </Card>
         <StatsPanel bot={bot} />
       </div>
+
+      {/* E.6: Fill activity heatmap */}
+      {gridStateQuery.data?.levels && gridStateQuery.data.levels.length > 0 && (
+        <Card className="p-5">
+          <FillHeatmapSection
+            botId={botId}
+            levels={gridStateQuery.data.levels}
+            spacing={
+              gridStateQuery.data.levels.length > 1
+                ? Math.abs(gridStateQuery.data.levels[1]!.price - gridStateQuery.data.levels[0]!.price)
+                : 1
+            }
+          />
+        </Card>
+      )}
 
       {/* Compound settings */}
       {status !== 'stopped' && (
@@ -1408,13 +1434,40 @@ function PageSkeleton() {
           <div key={i} className="h-24 bg-bg-elevated" />
         ))}
       </div>
-      <div className="h-[480px] bg-bg-elevated rounded-lg" />
+      <div className="h-[320px] sm:h-[420px] md:h-[560px] bg-bg-elevated rounded-lg" />
     </div>
   );
 }
 
 // Pull a numeric mark price out of the grid-state ticker payload.
 // GRVT ticker shape varies; we look for the most likely fields.
+// E.6: Wrapper that fetches fills and renders the heatmap.
+function FillHeatmapSection({
+  botId,
+  levels,
+  spacing,
+}: {
+  botId: number;
+  levels: GridLevel[];
+  spacing: number;
+}) {
+  const fillsQuery = useQuery({
+    queryKey: ['fills', botId, 'heatmap'],
+    queryFn: () => api.getFills(botId, { limit: 1000 }),
+    staleTime: 30_000,
+  });
+
+  if (!fillsQuery.data?.fills?.length) return null;
+
+  return (
+    <FillHeatmap
+      fills={fillsQuery.data.fills}
+      levels={levels}
+      spacing={spacing}
+    />
+  );
+}
+
 function useMarkPrice(state: GridState | undefined): number | null {
   const ticker = state?.ticker as
     | { mark_price?: string | number; last_price?: string | number; price?: string | number }

@@ -1,7 +1,7 @@
 // Overview page — multi-bot dashboard with stat-strip + BotCard grid + create CTA.
 
 import { useQuery } from '@tanstack/react-query';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { formatPercent, formatPnl, formatUsd } from '@/lib/format';
@@ -33,6 +33,13 @@ export function OverviewPage() {
   });
 
   const [wizardOpen, setWizardOpen] = useState(false);
+
+  // E.2: listen for keyboard shortcut `n b` dispatched from AppShell
+  useEffect(() => {
+    const handler = () => setWizardOpen(true);
+    window.addEventListener('wizard:open', handler);
+    return () => window.removeEventListener('wizard:open', handler);
+  }, []);
 
   if (botsQuery.isPending) return <PageSkeleton />;
   if (botsQuery.isError) {
