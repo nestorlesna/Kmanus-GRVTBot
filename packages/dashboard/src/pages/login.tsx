@@ -4,10 +4,12 @@ import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/primitives/button';
 import { Input } from '@/components/primitives/input';
+import { LanguageToggle, useT } from '@/i18n';
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
@@ -20,7 +22,7 @@ export function LoginPage() {
       await login(email, password);
       navigate('/', { replace: true });
     } catch (err) {
-      toast.error((err as Error).message || 'Login failed');
+      toast.error((err as Error).message || t('auth.login.loginFailed'));
     } finally {
       setPending(false);
     }
@@ -29,18 +31,21 @@ export function LoginPage() {
   return (
     <div className="min-h-dvh flex items-center justify-center p-4 bg-bg-base">
       <div className="w-full max-w-sm space-y-6">
+        <div className="flex justify-end">
+          <LanguageToggle />
+        </div>
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-            GRVT Grid
+            {t('header.brand')}
           </h1>
           <p className="text-sm text-text-muted mt-1">
-            Sign in to your account
+            {t('auth.login.subtitle')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Email"
+            label={t('auth.login.email')}
             type="email"
             autoComplete="email"
             value={email}
@@ -48,7 +53,7 @@ export function LoginPage() {
             disabled={pending}
           />
           <Input
-            label="Password"
+            label={t('auth.login.password')}
             type="password"
             autoComplete="current-password"
             value={password}
@@ -60,7 +65,7 @@ export function LoginPage() {
               to="/forgot-password"
               className="text-xs text-text-muted hover:text-primary hover:underline"
             >
-              Forgot password?
+              {t('auth.login.forgotPassword')}
             </Link>
           </div>
           <Button
@@ -69,14 +74,14 @@ export function LoginPage() {
             disabled={pending || !email || !password}
             className="w-full"
           >
-            {pending ? 'Signing in...' : 'Sign in'}
+            {pending ? t('auth.login.loggingIn') : t('auth.login.loginBtn')}
           </Button>
         </form>
 
         <p className="text-xs text-text-muted text-center">
-          Don't have an account?{' '}
+          {t('auth.login.noAccount')}{' '}
           <Link to="/signup" className="text-primary hover:underline">
-            Sign up
+            {t('auth.login.signUp')}
           </Link>
         </p>
       </div>

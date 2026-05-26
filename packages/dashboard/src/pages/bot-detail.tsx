@@ -42,6 +42,7 @@ import {
   FILL_FLASH_DURATION_MS,
   GridChart,
 } from '@/components/charts/grid-chart';
+import { useT } from '@/i18n';
 
 interface BotTick {
   id: number;
@@ -61,6 +62,7 @@ interface FillEvent {
 }
 
 export function BotDetailPage() {
+  const t = useT();
   const { id } = useParams();
   // Parse bot id from URL. NaN here means the route was hit without a
   // valid id segment — render the error card below instead of falling
@@ -187,7 +189,7 @@ export function BotDetailPage() {
       // Rollback on failure
       if (ctx?.prevBot) queryClient.setQueryData(['bot', botId], ctx.prevBot);
       if (ctx?.prevBots) queryClient.setQueryData(['bots'], ctx.prevBots);
-      toast.error(`Action failed: ${_err.message}`);
+      toast.error(t('botDetail.actionFailed', { msg: _err.message }));
     },
     onSettled() {
       // Always refetch after settled to get the real server state
@@ -200,19 +202,19 @@ export function BotDetailPage() {
   const startMutation = useMutation({
     mutationFn: () => api.startBot(botId),
     ...optimisticBotUpdate('running'),
-    onSuccess: () => toast.success(`Bot ${botId} started`),
+    onSuccess: () => toast.success(t('botDetail.startedToast', { id: botId })),
   });
 
   const pauseMutation = useMutation({
     mutationFn: () => api.pauseBot(botId),
     ...optimisticBotUpdate('paused'),
-    onSuccess: () => toast.success(`Bot ${botId} paused`),
+    onSuccess: () => toast.success(t('botDetail.pausedToast', { id: botId })),
   });
 
   const closeMutation = useMutation({
     mutationFn: () => api.closeBot(botId),
     ...optimisticBotUpdate('stopped'),
-    onSuccess: () => toast.success(`Bot ${botId} closed`),
+    onSuccess: () => toast.success(t('botDetail.closedToast', { id: botId })),
   });
 
   const confirm = useConfirm();
@@ -227,7 +229,7 @@ export function BotDetailPage() {
     return (
       <Card className="border-danger/40">
         <h2 className="text-lg font-semibold text-danger mb-2">
-          Failed to load bot {botId}
+          {t('botDetail.failedToLoad', { id: botId })}
         </h2>
         <p className="text-sm text-text-muted">
           {(botQuery.error as Error).message}
@@ -378,7 +380,7 @@ export function BotDetailPage() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Bot {bot.id}
+            {t('botDetail.pageHeading', { id: bot.id })}
           </h1>
           <StatusPill status={status} />
           <span className="text-sm text-text-muted">
@@ -396,10 +398,10 @@ export function BotDetailPage() {
           <Button
             variant="secondary"
             onClick={() => setRangeDialogOpen(true)}
-            title="Move/expand the grid range — useful when price drifts out of grid"
+            title={t('botDetail.updateRangeHint')}
           >
             <SlidersHorizontal className="size-4" />
-            Update range
+            {t('botDetail.updateRange')}
           </Button>
           {status === 'running' ? (
             <Button
@@ -408,7 +410,9 @@ export function BotDetailPage() {
               disabled={pauseMutation.isPending}
             >
               <Pause className="size-4" />
-              {pauseMutation.isPending ? 'Pausing…' : 'Pause'}
+              {pauseMutation.isPending
+                ? t('botDetail.pausing')
+                : t('botDetail.pause')}
             </Button>
           ) : status === 'paused' ? (
             <Button
@@ -417,7 +421,9 @@ export function BotDetailPage() {
               disabled={startMutation.isPending}
             >
               <Play className="size-4" />
-              {startMutation.isPending ? 'Starting…' : 'Start'}
+              {startMutation.isPending
+                ? t('botDetail.starting')
+                : t('botDetail.start')}
             </Button>
           ) : null}
           {status !== 'stopped' && (
@@ -425,10 +431,12 @@ export function BotDetailPage() {
               variant="danger"
               onClick={handleClose}
               disabled={closeMutation.isPending}
-              title="Cancel all orders and close the position — final stop"
+              title={t('botDetail.closeBotHint')}
             >
               <XCircle className="size-4" />
-              {closeMutation.isPending ? 'Closing…' : 'Close bot'}
+              {closeMutation.isPending
+                ? t('botDetail.closing')
+                : t('botDetail.closeBot')}
             </Button>
           )}
         </div>
@@ -507,7 +515,7 @@ export function BotDetailPage() {
         <div className="flex items-center justify-between px-5 py-3 border-b border-border-subtle">
           <div>
             <h2 className="text-sm font-semibold text-text-primary">
-              Grid Chart
+              {t('botDetail.gridChart')}
             </h2>
             <p className="text-2xs uppercase tracking-wider text-text-muted mt-0.5 flex items-center gap-2 flex-wrap">
               <span>{bot.pair} · 1H · {levels.length} levels</span>
@@ -558,7 +566,7 @@ export function BotDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 p-5">
           <h3 className="text-sm font-semibold text-text-primary mb-4">
-            Equity curve
+            {t('botDetail.equityCurve')}
           </h3>
           <BotDetailEquityCurve botId={botId} />
         </Card>
@@ -620,6 +628,7 @@ export function BotDetailPage() {
 // tick so changes take effect within ~5s.
 
 function RiskSettings({ bot }: { bot: any }) {
+  const t = useT();
   const qc = useQueryClient();
   const [sl, setSl] = useState<string>(
     bot.sl_pct != null ? String(bot.sl_pct) : ''
@@ -658,7 +667,7 @@ function RiskSettings({ bot }: { bot: any }) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-text-primary">
-            Stop-loss / Take-profit
+            {t('botDetail.stopLossTakeProfit')}
           </h3>
           <p className="text-2xs text-text-muted mt-0.5">
             Auto-close the bot when total PnL crosses these % thresholds

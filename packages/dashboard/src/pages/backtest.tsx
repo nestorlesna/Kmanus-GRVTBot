@@ -16,6 +16,7 @@ import { Input } from '@/components/primitives/input';
 import { StatCard } from '@/components/primitives/stat-card';
 import { EquityCurve, type EquityPoint } from '@/components/charts/equity-curve';
 import { formatPercent, formatPnl, formatUsdCompact } from '@/lib/format';
+import { useT } from '@/i18n';
 import type {
   BacktestInput,
   BacktestResult,
@@ -48,12 +49,12 @@ const INITIAL: FormState = {
   limit: '500',
 };
 
-const INTERVALS: Array<{ value: CandleInterval; label: string }> = [
-  { value: 'CI_15_M', label: '15 min' },
-  { value: 'CI_30_M', label: '30 min' },
-  { value: 'CI_1_H', label: '1 hour' },
-  { value: 'CI_4_H', label: '4 hours' },
-  { value: 'CI_1_D', label: '1 day' },
+const INTERVAL_KEYS: Array<{ value: CandleInterval; key: string }> = [
+  { value: 'CI_15_M', key: 'backtest.interval15m' },
+  { value: 'CI_30_M', key: 'backtest.interval30m' },
+  { value: 'CI_1_H', key: 'backtest.interval1h' },
+  { value: 'CI_4_H', key: 'backtest.interval4h' },
+  { value: 'CI_1_D', key: 'backtest.interval1d' },
 ];
 
 const FALLBACK_PAIRS = [
@@ -63,6 +64,7 @@ const FALLBACK_PAIRS = [
 ];
 
 export function BacktestPage() {
+  const t = useT();
   const [form, setForm] = useState<FormState>(INITIAL);
   const navigate = useNavigate();
 
@@ -92,14 +94,14 @@ export function BacktestPage() {
   const limit = parseInt(form.limit, 10);
 
   const errors: string[] = [];
-  if (!form.pair) errors.push('Pair required');
-  if (!Number.isFinite(lower) || lower <= 0) errors.push('Lower price must be > 0');
-  if (!Number.isFinite(upper) || upper <= 0) errors.push('Upper price must be > 0');
-  if (Number.isFinite(lower) && Number.isFinite(upper) && lower >= upper) errors.push('Lower must be < upper');
-  if (!Number.isInteger(grids) || grids < 2) errors.push('Grids must be >= 2');
-  if (!Number.isFinite(investment) || investment <= 0) errors.push('Investment must be > 0');
-  if (!Number.isFinite(leverage) || leverage < 1) errors.push('Leverage must be >= 1');
-  if (!Number.isFinite(feePct) || feePct < 0 || feePct > 1) errors.push('Fee must be in [0, 1]');
+  if (!form.pair) errors.push(t('backtest.validation.pairRequired'));
+  if (!Number.isFinite(lower) || lower <= 0) errors.push(t('backtest.validation.lowerGt0'));
+  if (!Number.isFinite(upper) || upper <= 0) errors.push(t('backtest.validation.upperGt0'));
+  if (Number.isFinite(lower) && Number.isFinite(upper) && lower >= upper) errors.push(t('backtest.validation.lowerLtUpper'));
+  if (!Number.isInteger(grids) || grids < 2) errors.push(t('backtest.validation.gridsMin'));
+  if (!Number.isFinite(investment) || investment <= 0) errors.push(t('backtest.validation.investmentGt0'));
+  if (!Number.isFinite(leverage) || leverage < 1) errors.push(t('backtest.validation.leverageMin'));
+  if (!Number.isFinite(feePct) || feePct < 0 || feePct > 1) errors.push(t('backtest.validation.feeRange'));
   const isValid = errors.length === 0;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -123,8 +125,6 @@ export function BacktestPage() {
   }
 
   function applyToWizard() {
-    // Hand the validated params to OverviewPage via router state. It
-    // reads `presetWizard` and opens the create-bot-wizard pre-filled.
     navigate('/', {
       state: {
         presetWizard: {
@@ -143,23 +143,23 @@ export function BacktestPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Backtest</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t('backtest.title')}
+        </h1>
         <p className="text-sm text-text-muted mt-1">
-          Simulate a grid bot on historical candles. No orders placed,
-          no funds at risk. Fees are deducted per round trip.
+          {t('backtest.subtitle')}
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* ── Form ───────────────────────────────────────────────── */}
         <Card className="lg:col-span-2 flex flex-col gap-4">
           <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
-            Parameters
+            {t('backtest.parameters')}
           </h2>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-2xs font-semibold uppercase tracking-wider text-text-muted">
-              Pair
+              {t('backtest.pair')}
             </label>
             <select
               value={form.pair}
@@ -175,19 +175,19 @@ export function BacktestPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-2xs font-semibold uppercase tracking-wider text-text-muted">
-                Direction
+                {t('backtest.direction')}
               </label>
               <select
                 value={form.direction}
                 onChange={(e) => update('direction', e.target.value as 'long' | 'short')}
                 className="h-10 px-3 rounded-md bg-bg-surface border border-border-subtle text-sm text-text-primary"
               >
-                <option value="long">Long</option>
-                <option value="short">Short</option>
+                <option value="long">{t('backtest.directionLong')}</option>
+                <option value="short">{t('backtest.directionShort')}</option>
               </select>
             </div>
             <Input
-              label="Leverage"
+              label={t('backtest.leverage')}
               numeric
               value={form.leverage}
               onChange={(e) => update('leverage', e.target.value)}
@@ -196,14 +196,14 @@ export function BacktestPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Lower price"
+              label={t('backtest.lowerPrice')}
               numeric
               placeholder="e.g. 1800"
               value={form.lower}
               onChange={(e) => update('lower', e.target.value)}
             />
             <Input
-              label="Upper price"
+              label={t('backtest.upperPrice')}
               numeric
               placeholder="e.g. 2400"
               value={form.upper}
@@ -213,13 +213,13 @@ export function BacktestPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Grids"
+              label={t('backtest.grids')}
               numeric
               value={form.grids}
               onChange={(e) => update('grids', e.target.value)}
             />
             <Input
-              label="Investment (USDT)"
+              label={t('backtest.investment')}
               numeric
               value={form.investment}
               onChange={(e) => update('investment', e.target.value)}
@@ -228,32 +228,32 @@ export function BacktestPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Fee % per side"
+              label={t('backtest.feePerSide')}
               numeric
               value={form.feePct}
               onChange={(e) => update('feePct', e.target.value)}
-              helper="GRVT maker = 0.05"
+              helper={t('backtest.feeHelper')}
             />
             <Input
-              label="Candles"
+              label={t('backtest.candles')}
               numeric
               value={form.limit}
               onChange={(e) => update('limit', e.target.value)}
-              helper="Max 1000"
+              helper={t('backtest.candlesHelper')}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-2xs font-semibold uppercase tracking-wider text-text-muted">
-              Interval
+              {t('backtest.interval')}
             </label>
             <select
               value={form.interval}
               onChange={(e) => update('interval', e.target.value as CandleInterval)}
               className="h-10 px-3 rounded-md bg-bg-surface border border-border-subtle text-sm text-text-primary"
             >
-              {INTERVALS.map((i) => (
-                <option key={i.value} value={i.value}>{i.label}</option>
+              {INTERVAL_KEYS.map((i) => (
+                <option key={i.value} value={i.value}>{t(i.key)}</option>
               ))}
             </select>
           </div>
@@ -271,16 +271,15 @@ export function BacktestPage() {
             disabled={!isValid || mutation.isPending}
           >
             <Play className="size-4" />
-            {mutation.isPending ? 'Running...' : 'Run backtest'}
+            {mutation.isPending ? t('backtest.running') : t('backtest.runBtn')}
           </Button>
         </Card>
 
-        {/* ── Result ─────────────────────────────────────────────── */}
         <div className="lg:col-span-3 flex flex-col gap-4">
           {mutation.isError && (
             <Card className="border-danger/40">
               <p className="text-sm text-danger">
-                Backtest failed: {(mutation.error as Error).message}
+                {t('backtest.failedPrefix')} {(mutation.error as Error).message}
               </p>
             </Card>
           )}
@@ -288,7 +287,7 @@ export function BacktestPage() {
           {!mutation.data && !mutation.isPending && !mutation.isError && (
             <Card>
               <p className="text-sm text-text-muted">
-                Configure parameters and run a backtest. Results appear here.
+                {t('backtest.placeholder')}
               </p>
             </Card>
           )}
@@ -296,7 +295,7 @@ export function BacktestPage() {
           {mutation.isPending && (
             <Card>
               <p className="text-sm text-text-muted animate-pulse">
-                Fetching candles and simulating...
+                {t('backtest.fetching')}
               </p>
             </Card>
           )}
@@ -315,57 +314,60 @@ function ResultPanel({
   result: BacktestResult;
   onApply: () => void;
 }) {
+  const t = useT();
   const points: EquityPoint[] = result.equityCurve.map((p) => ({
     date: new Date(p.time * 1000).toISOString().slice(0, 16).replace('T', ' '),
     equity: p.equity,
   }));
 
   const warnings: string[] = [];
-  if (result.maxDrawdownPct > 30) warnings.push(`High drawdown — ${result.maxDrawdownPct.toFixed(1)}% peak-to-trough.`);
-  if (result.roundTrips < 5) warnings.push(`Few round trips (${result.roundTrips}) — range may be too wide or grids too few.`);
-  if (result.netProfit <= 0) warnings.push('Net profit ≤ 0 after fees. Tighten range or increase grids.');
+  if (result.maxDrawdownPct > 30)
+    warnings.push(t('backtest.warnHighDrawdown', { pct: result.maxDrawdownPct.toFixed(1) }));
+  if (result.roundTrips < 5)
+    warnings.push(t('backtest.warnFewTrips', { n: result.roundTrips }));
+  if (result.netProfit <= 0) warnings.push(t('backtest.warnNoProfit'));
 
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-border-subtle rounded-lg overflow-hidden">
         <StatCard
-          label="Net profit"
+          label={t('backtest.netProfit')}
           value={
             <span className={result.netProfit >= 0 ? 'text-success' : 'text-danger'}>
               {formatPnl(result.netProfit)}
             </span>
           }
         />
-        <StatCard label="Gross profit" value={formatPnl(result.totalProfit)} />
-        <StatCard label="Fees paid" value={formatPnl(-result.totalFees)} />
+        <StatCard label={t('backtest.grossProfit')} value={formatPnl(result.totalProfit)} />
+        <StatCard label={t('backtest.feesPaid')} value={formatPnl(-result.totalFees)} />
         <StatCard
-          label="Max drawdown"
+          label={t('backtest.maxDrawdown')}
           value={
             <span className={result.maxDrawdownPct > 30 ? 'text-danger' : 'text-text-primary'}>
               {formatPercent(-result.maxDrawdownPct)}
             </span>
           }
         />
-        <StatCard label="Round trips" value={String(result.roundTrips)} />
+        <StatCard label={t('backtest.roundTrips')} value={String(result.roundTrips)} />
         <StatCard
-          label="Avg / trip"
+          label={t('backtest.avgPerTrip')}
           value={formatPnl(result.avgProfitPerTrip)}
         />
         <StatCard
-          label="Profit factor"
+          label={t('backtest.profitFactor')}
           value={Number.isFinite(result.profitFactor) ? result.profitFactor.toFixed(2) : '∞'}
         />
-        <StatCard label="Days in market" value={`${result.daysInMarket}d`} />
-        <StatCard label="Candles" value={String(result.candlesProcessed)} />
+        <StatCard label={t('backtest.daysInMarket')} value={`${result.daysInMarket}d`} />
+        <StatCard label={t('backtest.candlesProcessed')} value={String(result.candlesProcessed)} />
       </div>
 
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">
-            Equity curve
+            {t('backtest.equityCurve')}
           </h2>
           <span className="text-2xs text-text-muted">
-            Starts at {formatUsdCompact(points[0]?.equity)}
+            {t('backtest.startsAt', { amount: formatUsdCompact(points[0]?.equity ?? 0) })}
           </span>
         </div>
         <EquityCurve points={points} height={260} />
@@ -386,7 +388,7 @@ function ResultPanel({
 
       <div className="flex justify-end">
         <Button variant="secondary" onClick={onApply}>
-          Apply to wizard
+          {t('backtest.applyToWizard')}
           <ArrowRight className="size-4" />
         </Button>
       </div>

@@ -2,24 +2,26 @@ import { NavLink } from 'react-router-dom';
 import { FlaskConical, Hexagon, LayoutGrid, Settings } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { LucideIcon } from 'lucide-react';
+import { useT } from '@/i18n';
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   end?: boolean;
 }
 
 const NAV: NavItem[] = [
-  { to: '/', label: 'Overview', icon: LayoutGrid, end: true },
-  { to: '/bots', label: 'Bots', icon: Hexagon },
-  { to: '/backtest', label: 'Backtest', icon: FlaskConical },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/', labelKey: 'nav.overview', icon: LayoutGrid, end: true },
+  { to: '/bots', labelKey: 'nav.bots', icon: Hexagon },
+  { to: '/backtest', labelKey: 'nav.backtest', icon: FlaskConical },
+  { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
 // Mobile bottom nav (visible <md). 4 items, ≤5 limit per design doc §7.1.
 // Touch targets are 56px tall to satisfy the 44pt minimum + safe area.
 export function BottomNav() {
+  const t = useT();
   return (
     <nav
       aria-label="Mobile navigation"
@@ -44,7 +46,7 @@ export function BottomNav() {
           }
         >
           <item.icon className="size-5" aria-hidden="true" />
-          {item.label}
+          {t(item.labelKey)}
         </NavLink>
       ))}
     </nav>

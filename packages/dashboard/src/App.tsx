@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster, toast } from 'sonner';
 import { AuthProvider } from './lib/auth-context';
+import { LangProvider } from './i18n';
 import { AppShell } from './components/layout/app-shell';
 import { ProtectedRoute } from './components/protected-route';
 import { ErrorBoundary } from './components/error-boundary';
@@ -84,8 +85,9 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+      <LangProvider>
+        <AuthProvider>
+          <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <Routes>
             {/* Public auth routes — no AppShell, no ProtectedRoute */}
             <Route path="login" element={<LoginPage />} />
@@ -170,8 +172,9 @@ export default function App() {
             },
           }}
         />
-        <ConfirmHost />
-      </AuthProvider>
+          <ConfirmHost />
+        </AuthProvider>
+      </LangProvider>
     </QueryClientProvider>
   );
 }

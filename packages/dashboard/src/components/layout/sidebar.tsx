@@ -2,27 +2,26 @@ import { NavLink } from 'react-router-dom';
 import { FlaskConical, Hexagon, LayoutGrid, Settings } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { LucideIcon } from 'lucide-react';
+import { useT } from '@/i18n';
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   end?: boolean;
 }
 
-// History tab removed: there is no cross-bot activity view yet — bot detail
-// already exposes the per-bot Fills/Snapshots tables. Will reintroduce when
-// there's a real global timeline to show.
 const NAV: NavItem[] = [
-  { to: '/', label: 'Overview', icon: LayoutGrid, end: true },
-  { to: '/bots', label: 'Bots', icon: Hexagon },
-  { to: '/backtest', label: 'Backtest', icon: FlaskConical },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/', labelKey: 'nav.overview', icon: LayoutGrid, end: true },
+  { to: '/bots', labelKey: 'nav.bots', icon: Hexagon },
+  { to: '/backtest', labelKey: 'nav.backtest', icon: FlaskConical },
+  { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
 // Desktop sidebar (hidden on mobile — see BottomNav).
 // 224px fixed width per wireframe §7.1.
 export function Sidebar() {
+  const t = useT();
   return (
     <aside
       className={cn(
@@ -48,7 +47,7 @@ export function Sidebar() {
             }
           >
             <item.icon className="size-4" aria-hidden="true" />
-            {item.label}
+            {t(item.labelKey)}
           </NavLink>
         ))}
       </nav>

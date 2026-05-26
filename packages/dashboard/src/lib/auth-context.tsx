@@ -32,7 +32,7 @@ interface AuthCtx {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, tosLang?: 'es' | 'en') => Promise<void>;
   logout: () => void;
   refreshMe: () => Promise<void>;
 }
@@ -106,8 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [saveToken]);
 
-  const signup = useCallback(async (email: string, password: string) => {
-    const res = await api.signup(email, password);
+  const signup = useCallback(async (
+    email: string,
+    password: string,
+    tosLang: 'es' | 'en' = 'en'
+  ) => {
+    const res = await api.signup(email, password, tosLang);
     saveToken(res.token);
     setUser({
       id: res.userId,

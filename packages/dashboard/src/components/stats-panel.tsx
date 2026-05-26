@@ -11,12 +11,14 @@ import { Mono } from './primitives/mono';
 import { api } from '@/lib/api-client';
 import { formatPnl, formatUsd } from '@/lib/format';
 import type { BotSummary } from '@/lib/api-types';
+import { useT } from '@/i18n';
 
 interface StatsPanelProps {
   bot: BotSummary;
 }
 
 export function StatsPanel({ bot }: StatsPanelProps) {
+  const t = useT();
   const snapshots = useQuery({
     queryKey: ['snapshots', bot.id],
     queryFn: () => api.getSnapshots(bot.id),
@@ -70,34 +72,33 @@ export function StatsPanel({ bot }: StatsPanelProps) {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-text-primary">Statistics</h3>
+        <h3 className="text-sm font-semibold text-text-primary">
+          {t('statsPanel.title')}
+        </h3>
         {unpairedSells > 0 && (
-          <span
-            className="text-2xs text-warning"
-            title={`${unpairedSells} sells couldn't be paired against a buy in our history. Likely caused by GRVT's fill_history window cutting off the oldest fills, or by manual position adjustments. Numbers below are a lower bound on real grid profit.`}
-          >
-            ⓘ partial data
+          <span className="text-2xs text-warning">
+            {t('statsPanel.partialData')}
           </span>
         )}
       </div>
       <dl className="space-y-3">
         <Row
-          label="Grid profit (net)"
+          label={t('statsPanel.gridProfitNet')}
           value={formatPnl(netGridProfit)}
           tone={netGridProfit > 0 ? 'success' : netGridProfit < 0 ? 'danger' : 'default'}
         />
-        <Row label="Grid profit (gross)" value={formatPnl(gridProfit)} />
-        <Row label="Round trips" value={String(pairs)} />
-        <Row label="Avg profit/pair" value={formatPnl(avgPerPair)} />
-        <Row label="Days active" value={String(days)} />
+        <Row label={t('statsPanel.gridProfitGross')} value={formatPnl(gridProfit)} />
+        <Row label={t('statsPanel.roundTrips')} value={String(pairs)} />
+        <Row label={t('statsPanel.avgPerPair')} value={formatPnl(avgPerPair)} />
+        <Row label={t('statsPanel.daysActive')} value={String(days)} />
         <Row
-          label="Avg/day (net)"
+          label={t('statsPanel.avgPerDayNet')}
           value={formatUsd(avgPerDay)}
           tone={avgPerDay > 0 ? 'success' : avgPerDay < 0 ? 'danger' : 'default'}
         />
         <hr className="border-border-subtle" />
         <Row
-          label={`Maker rebate (${rebate.data?.count ?? 0} fills)`}
+          label={t('statsPanel.makerRebateLabel', { count: rebate.data?.count ?? 0 })}
           value={formatPnl(rebate.data?.netRebateUsdt ?? 0)}
           tone={
             (rebate.data?.netRebateUsdt ?? 0) > 0
@@ -108,7 +109,7 @@ export function StatsPanel({ bot }: StatsPanelProps) {
           }
         />
         <Row
-          label="Funding"
+          label={t('statsPanel.funding')}
           value={formatPnl(totalFunding)}
           tone={totalFunding > 0 ? 'success' : totalFunding < 0 ? 'danger' : 'default'}
         />

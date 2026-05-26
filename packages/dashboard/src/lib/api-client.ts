@@ -300,13 +300,13 @@ export const api = {
 
   // ── Auth endpoints ──────────────────────────────────────────────
 
-  signup: (email: string, password: string) =>
+  signup: (email: string, password: string, tosLang: 'es' | 'en' = 'en') =>
     publicRequest<{
       token: string;
       userId: number;
       isAdmin: boolean;
       hasGrvtCreds: boolean;
-    }>('/auth/signup', { email, password }),
+    }>('/auth/signup', { email, password, terms_lang: tosLang }),
 
   login: (email: string, password: string) =>
     publicRequest<{
@@ -336,14 +336,19 @@ export const api = {
     }>('/auth/me'),
 
   getTos: () =>
-    request<{ version: string; text: string }>('/auth/tos'),
+    request<{
+      version: string;
+      text: string;
+      texts?: { en: string; es: string };
+    }>('/auth/tos'),
 
   saveGrvtCredentials: (body: {
     apiKey: string;
     apiSecret: string;
     tradingAddress: string;
     accountId: string;
-    subAccountId: string;
+    // Optional: when empty the server defaults to accountId.
+    subAccountId?: string;
   }) =>
     request<{ ok: true }>('/auth/grvt-credentials', {
       method: 'POST',
@@ -372,7 +377,8 @@ export const api = {
     apiSecret: string;
     tradingAddress: string;
     accountId: string;
-    subAccountId: string;
+    // Optional: when empty the server defaults to accountId.
+    subAccountId?: string;
     isDefault?: boolean;
   }) =>
     request<{

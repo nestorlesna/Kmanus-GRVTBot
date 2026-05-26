@@ -287,8 +287,14 @@ export function createV2Router(deps: V2RouterDeps): Router {
   // version each user accepted. When you change the text, bump the
   // version string AND update the corresponding terms_text in the
   // dashboard signup form so the hash matches what was shown.
-  const SIGNUP_TOS_VERSION = '2026-05-26-v2';
-  const SIGNUP_TOS_TEXT = `Terms of Use — please read carefully before creating an account.
+  //
+  // Bilingual: the dashboard offers an EN/ES toggle. The selected
+  // language is sent as `terms_lang` in the signup body and stored as
+  // part of `terms_version` (e.g. "2026-05-26-v3-es") so audit logs
+  // record exactly which translation the user agreed to. Both
+  // translations are legally equivalent for the operator's purposes.
+  const SIGNUP_TOS_VERSION = '2026-05-26-v3';
+  const SIGNUP_TOS_TEXT_EN = `Terms of Use — please read carefully before creating an account.
 
 1. WHAT THIS SERVICE IS
 This is a self-hosted grid trading bot for the GRVT perpetual futures exchange. By signing up, you authorize the bot to place, modify, and cancel orders on your GRVT sub-account using API credentials you provide.
@@ -335,11 +341,73 @@ The operator may suspend or terminate your account at any time, with or without 
 15. ACCEPTANCE
 By clicking "I have read and accept the terms above" and creating an account, you confirm that you have read, understood, and agree to be bound by every clause above, that you are at least 18 years old, that you are using your own funds, and that you accept all risk of loss.`;
 
+  const SIGNUP_TOS_TEXT_ES = `Términos de Uso — leé con atención antes de crear una cuenta.
+
+1. QUÉ ES ESTE SERVICIO
+Esto es un bot grid de trading autohospedado para la exchange de futuros perpetuos GRVT. Al registrarte, autorizás al bot a colocar, modificar y cancelar órdenes en tu sub-cuenta de GRVT usando las credenciales API que vos provees.
+
+2. QUÉ NO ES ESTE SERVICIO
+El operador no es un broker, custodio, asesor financiero, fiduciario, exchange ni profesional registrado en inversiones. Ninguna parte de este servicio constituye asesoramiento de inversión, legal, impositivo o financiero. El operador nunca tiene tus fondos — tus fondos quedan siempre en tu cuenta de GRVT.
+
+3. TU RESPONSABILIDAD
+Vos sos el único responsable por: (a) cada trade que el bot ejecute en tu cuenta, (b) la configuración que elijas (rango de precios, apalancamiento, cantidad de niveles, tamaño de inversión, safeguards), (c) la seguridad de tu cuenta de GRVT y de tus credenciales API, (d) cualquier reporte impositivo sobre ganancias o pérdidas, y (e) verificar que el trading automatizado sea legal en tu jurisdicción.
+
+4. RIESGO DE TRADING — PODÉS PERDER TODO
+El trading de futuros perpetuos con apalancamiento es extremadamente riesgoso. Podés perder hasta el 100% del capital que asignes, y con apalancamiento podés perder más que tu posición inicial por liquidación, pagos de funding o movimientos bruscos del mercado. El bot no elimina este riesgo — automatiza la ejecución de una estrategia que vos elegís. No hay ganancia garantizada, esperada ni implícita. La performance pasada de cualquier muestra, backtest o bot de otro usuario no predice tus resultados.
+
+5. SOFTWARE PROVISTO "TAL CUAL"
+El software se provee "tal cual" y "según disponibilidad", sin garantía de ningún tipo — expresa, implícita, estatutaria o de cualquier otra forma — incluyendo cualquier garantía de comerciabilidad, idoneidad para un propósito particular, exactitud, integridad, no infracción u operación ininterrumpida. Pueden existir bugs, malas configuraciones, casos límite, race conditions, vulnerabilidades en dependencias y comportamientos no documentados que pueden causar pérdida parcial o total de fondos.
+
+6. SIN NIVEL DE SERVICIO — EL DOWNTIME ES ESPERABLE
+El operador no se compromete a ningún uptime. El servicio puede ser pausado, degradado o apagado en cualquier momento, con o sin aviso, por mantenimiento, razones de costo, razones legales, caídas de exchange, fallas de infraestructura o sin motivo. Durante el downtime tus bots pueden dejar de tradear, perder fills, no reaccionar a movimientos de precio o dejar posiciones abiertas sin gestionar — cualquiera de estas situaciones puede causar pérdidas.
+
+7. DEPENDENCIAS DE TERCEROS
+Este servicio depende de: GRVT (exchange, API, motor de matching, custodia), la red blockchain subyacente, infraestructura de internet, el proveedor de cloud que aloja este servidor, el sistema operativo, librerías de runtime y proveedores de envío de email. El operador no tiene control y no acepta responsabilidad por ninguna falla, caída, cambio en términos, downtime, hackeo, exploit, slippage o comportamiento malicioso de ninguno de estos terceros. Los riesgos incluyen, sin limitarse a: caídas de GRVT, límites o cambios en su API, insolvencia del exchange, bugs en smart contracts, congestión de red, fallas de oráculos y compromiso del proveedor de DNS o TLS.
+
+8. MANEJO DE DATOS + CIFRADO
+El bot guarda tu email, un hash bcrypt de tu contraseña, y tus credenciales API de GRVT cifradas en reposo con AES-256-GCM. La clave maestra de cifrado vive en el disco del servidor para que el bot pueda descifrar las credenciales al colocar órdenes. ESTO SIGNIFICA que el operador del servidor tiene acceso técnico para descifrar tus credenciales, y cualquier parte que comprometa el servidor (atacante, empleado, proveedor de hosting, autoridad gubernamental) también puede obtener ese acceso. Si necesitás acceso cero por parte de terceros a tus claves, autohospedá tu propia copia del software (ver el repositorio en GitHub). Al usar este servicio hosteado vos aceptás esta exposición.
+
+9. INCIDENTES DE SEGURIDAD
+En caso de compromiso del servidor, brecha de datos, robo de credenciales, pérdida de fondos o cualquier otro incidente de seguridad — sea causado por un atacante, por un bug, por el operador, por un proveedor upstream o por fuerza mayor — vos renunciás a cualquier reclamo contra el operador por daños directos, indirectos, incidentales, consecuentes, especiales, punitivos o ejemplares, incluyendo, sin limitarse a, fondos perdidos, ganancias perdidas, oportunidades perdidas, trades perdidos, liquidaciones, posiciones no deseadas, multas regulatorias o daño reputacional. Reconocés que la única obligación del operador tras un incidente es intentar notificar oportunamente — no hay compensación, reembolso ni seguro.
+
+10. LIMITACIÓN DE RESPONSABILIDAD
+En la máxima medida permitida por la ley aplicable, en ningún caso el operador, los contribuidores o cualquier parte afiliada serán responsables ante vos o ante cualquier tercero por ningún reclamo, pérdida, daño, costo o gasto de ninguna naturaleza que surja de o se relacione con tu uso de este servicio. Esta limitación aplica sin importar la teoría legal de responsabilidad (contrato, daño extracontractual, negligencia, responsabilidad objetiva u otra), sin importar si el operador fue advertido de la posibilidad de tal pérdida, e incluso si una solución se considera fallida en su propósito esencial. Si alguna parte de esta limitación se considera inaplicable, la responsabilidad total agregada del operador hacia vos queda capeada en USD 1 (un dólar estadounidense).
+
+11. INDEMNIZACIÓN
+Vos te comprometés a indemnizar, defender y mantener indemne al operador y a todos los contribuidores frente a cualquier reclamo, demanda, pérdida, responsabilidad, costo o gasto (incluyendo honorarios razonables de abogados) iniciado por cualquier tercero como consecuencia de tu uso del servicio, tu violación de estos términos, tu violación de cualquier ley o tu infracción de derechos de terceros.
+
+12. SIN REVERSIÓN, SIN REEMBOLSO
+No existe mecanismo de chargeback, reembolso o rollback. Los trades ejecutados por el bot son finales y se liquidan en GRVT. El operador no puede revertir un trade, deshacer una liquidación, recuperar fondos robados ni restaurar una API key perdida.
+
+13. CAMBIOS EN ESTOS TÉRMINOS
+El operador puede actualizar estos términos en cualquier momento. El uso continuado luego de una actualización constituye aceptación de los nuevos términos. Los cambios materiales serán visibles en el próximo login.
+
+14. TERMINACIÓN
+El operador puede suspender o terminar tu cuenta en cualquier momento, con o sin causa, con o sin aviso. Vos podés dejar de usar el servicio y revocar tus API keys de GRVT en cualquier momento.
+
+15. ACEPTACIÓN
+Al hacer click en "Leí y acepto los términos de arriba" y crear una cuenta, confirmás que leíste, comprendiste y aceptás estar obligado por cada cláusula de arriba, que tenés al menos 18 años, que estás usando tus propios fondos y que aceptás todo el riesgo de pérdida.`;
+
+  const SIGNUP_TOS_TEXTS = {
+    en: SIGNUP_TOS_TEXT_EN,
+    es: SIGNUP_TOS_TEXT_ES,
+  } as const;
+  type TosLang = keyof typeof SIGNUP_TOS_TEXTS;
+  function pickTosLang(raw: unknown): TosLang {
+    return String(raw ?? '').toLowerCase() === 'es' ? 'es' : 'en';
+  }
+
   // POST /api/v2/auth/signup — public.
   router.post('/auth/signup', SIGNUP_LIMITER, asyncHandler(async (req, res) => {
-    const body = (req.body ?? {}) as { email?: unknown; password?: unknown };
+    const body = (req.body ?? {}) as {
+      email?: unknown;
+      password?: unknown;
+      terms_lang?: unknown;
+    };
     const email = String(body.email ?? '').trim().toLowerCase();
     const password = String(body.password ?? '');
+    const tosLang = pickTosLang(body.terms_lang);
+    const tosText = SIGNUP_TOS_TEXTS[tosLang];
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'invalid email' });
     }
@@ -381,9 +449,9 @@ By clicking "I have read and accept the terms above" and creating an account, yo
       context_ref: null,
       ip_address: ipAddress,
       user_agent: userAgent,
-      terms_version: SIGNUP_TOS_VERSION,
-      terms_text: SIGNUP_TOS_TEXT,
-      terms_text_hash: createHash('sha256').update(SIGNUP_TOS_TEXT).digest('hex'),
+      terms_version: `${SIGNUP_TOS_VERSION}-${tosLang}`,
+      terms_text: tosText,
+      terms_text_hash: createHash('sha256').update(tosText).digest('hex'),
     });
     log.info({ userId, email, isAdmin }, 'user signed up');
     res.json({
@@ -424,7 +492,12 @@ By clicking "I have read and accept the terms above" and creating an account, yo
   // current TOS text + version so signup form shows the same string
   // we'll hash on the server side.
   router.get('/auth/tos', (_req, res) => {
-    res.json({ version: SIGNUP_TOS_VERSION, text: SIGNUP_TOS_TEXT });
+    res.json({
+      version: SIGNUP_TOS_VERSION,
+      // Backwards-compat: old dashboards expecting `text` get EN.
+      text: SIGNUP_TOS_TEXTS.en,
+      texts: SIGNUP_TOS_TEXTS,
+    });
   });
 
   // E.9 — Password reset.
@@ -683,7 +756,12 @@ By clicking "I have read and accept the terms above" and creating an account, yo
     const apiSecret = String(body.apiSecret ?? '').trim();
     const tradingAddress = String(body.tradingAddress ?? '').trim();
     const accountId = String(body.accountId ?? '').trim();
-    const subAccountId = String(body.subAccountId ?? '').trim();
+    // Sub-account is optional in the UI: when omitted, default to the
+    // account id. Most GRVT users only have one sub-account whose id
+    // equals the account id, so this removes a confusing field for
+    // 90%+ of signups while still letting power users target a
+    // specific sub-account when they have several.
+    const subAccountId = String(body.subAccountId ?? '').trim() || accountId;
 
     const errors: string[] = [];
     if (!apiKey) errors.push('apiKey is required');
@@ -695,7 +773,6 @@ By clicking "I have read and accept the terms above" and creating an account, yo
       errors.push('tradingAddress must be a 0x-prefixed Ethereum address');
     }
     if (!accountId) errors.push('accountId is required');
-    if (!subAccountId) errors.push('subAccountId is required');
     if (errors.length > 0) {
       return res.status(400).json({ error: 'validation_failed', errors });
     }
@@ -840,7 +917,9 @@ By clicking "I have read and accept the terms above" and creating an account, yo
     const apiSecret = String(body.apiSecret ?? '').trim();
     const tradingAddress = String(body.tradingAddress ?? '').trim();
     const accountId = String(body.accountId ?? '').trim();
-    const subAccountId = String(body.subAccountId ?? '').trim();
+    // Sub-account optional — defaults to accountId. See note in the
+    // default-credentials endpoint above for rationale.
+    const subAccountId = String(body.subAccountId ?? '').trim() || accountId;
     const isDefault = body.isDefault === true;
 
     const errors: string[] = [];
@@ -854,7 +933,6 @@ By clicking "I have read and accept the terms above" and creating an account, yo
       errors.push('tradingAddress must be a 0x-prefixed Ethereum address');
     }
     if (!accountId) errors.push('accountId is required');
-    if (!subAccountId) errors.push('subAccountId is required');
     if (errors.length > 0) {
       return res.status(400).json({ error: 'validation_failed', errors });
     }

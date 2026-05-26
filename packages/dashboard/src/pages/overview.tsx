@@ -18,6 +18,7 @@ import { Button } from '@/components/primitives/button';
 import { Card } from '@/components/primitives/card';
 import { BotCard } from '@/components/bot-card';
 import { EquityCurve } from '@/components/charts/equity-curve';
+import { useT } from '@/i18n';
 
 // Lazy: only loaded when the user clicks "New bot" — keeps the wizard's
 // validation hooks + Modal off the initial page payload.
@@ -28,6 +29,7 @@ const CreateBotWizard = lazy(() =>
 );
 
 export function OverviewPage() {
+  const t = useT();
   const botsQuery = useQuery({
     queryKey: ['bots'],
     queryFn: () => api.getBots(),
@@ -82,14 +84,10 @@ export function OverviewPage() {
     return (
       <Card className="border-danger/40">
         <h2 className="text-lg font-semibold text-danger mb-2">
-          Failed to load bots
+          {t('overview.failedToLoad')}
         </h2>
         <p className="text-sm text-text-muted">
           {(botsQuery.error as Error).message}
-        </p>
-        <p className="text-xs text-text-muted mt-3">
-          Check that <code className="font-mono">VITE_DASHBOARD_API_KEY</code>{' '}
-          is set in <code className="font-mono">.env.local</code>.
         </p>
       </Card>
     );
@@ -126,27 +124,32 @@ export function OverviewPage() {
       {/* Page header + create CTA */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t('overview.title')}
+          </h1>
           <p className="text-sm text-text-muted mt-1">
-            {bots.length} {bots.length === 1 ? 'bot' : 'bots'} ·{' '}
-            <span className="text-success">{runningCount} running</span>
+            {t(bots.length === 1 ? 'overview.botCount' : 'overview.botCountPlural', { count: bots.length })}
+            {' · '}
+            <span className="text-success">
+              {t('overview.runningCount', { count: runningCount })}
+            </span>
           </p>
         </div>
         <Button onClick={() => setWizardOpen(true)}>
           <Plus className="size-4" />
-          New bot
+          {t('overview.newBot')}
         </Button>
       </div>
 
       {/* Aggregate stat strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border-subtle rounded-lg overflow-hidden">
         <StatCard
-          label="Total equity"
+          label={t('overview.totalEquity')}
           value={formatUsd(totalEquity)}
           delta={<Delta value={totalPnlPct} format={formatPercent} />}
         />
         <StatCard
-          label="Total PnL"
+          label={t('overview.totalPnl')}
           value={
             <span
               className={
@@ -161,9 +164,9 @@ export function OverviewPage() {
             </span>
           }
         />
-        <StatCard label="Realized" value={formatPnl(totalRealized)} />
+        <StatCard label={t('overview.realized')} value={formatPnl(totalRealized)} />
         <StatCard
-          label="Unrealized"
+          label={t('overview.unrealized')}
           value={
             <span
               className={
@@ -182,9 +185,9 @@ export function OverviewPage() {
 
       {/* Risk strip — H.7 */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-border-subtle rounded-lg overflow-hidden">
-        <StatCard label="Position notional" value={formatUsdCompact(totalPositionUsdt)} />
-        <StatCard label="Invested" value={formatUsdCompact(totalInvested)} />
-        <StatCard label="Avg leverage" value={`${avgLeverage.toFixed(1)}x`} />
+        <StatCard label={t('overview.positionNotional')} value={formatUsdCompact(totalPositionUsdt)} />
+        <StatCard label={t('overview.invested')} value={formatUsdCompact(totalInvested)} />
+        <StatCard label={t('overview.avgLeverage')} value={`${avgLeverage.toFixed(1)}x`} />
       </div>
 
       {/* Portfolio equity + pair exposure — H.7 */}
@@ -192,13 +195,13 @@ export function OverviewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card className="lg:col-span-2">
             <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">
-              Portfolio equity (90d)
+              {t('overview.portfolioEquityDays', { days: 90 })}
             </h2>
             <EquityCurve points={curveQuery.data?.points ?? []} height={220} />
           </Card>
           <Card>
             <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">
-              Pair exposure
+              {t('overview.pairExposure')}
             </h2>
             <PairExposureList exposure={pairExposure} />
           </Card>
@@ -208,7 +211,7 @@ export function OverviewPage() {
       {/* BotCard grid */}
       <div>
         <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">
-          Bots
+          {t('nav.bots')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {bots.map((bot) => (
@@ -223,9 +226,9 @@ export function OverviewPage() {
             <div className="size-12 rounded-full bg-bg-elevated flex items-center justify-center">
               <Plus className="size-6" />
             </div>
-            <div className="text-sm font-semibold">Create new bot</div>
+            <div className="text-sm font-semibold">{t('overview.createNewBot')}</div>
             <div className="text-2xs text-center max-w-[200px]">
-              Launch a new grid bot with the wizard
+              {t('overview.createNewBotSub')}
             </div>
           </button>
         </div>
@@ -250,12 +253,13 @@ export function OverviewPage() {
 // Horizontal bars sized to the largest exposure. Empty state when every
 // bot has a flat position (e.g. all paused with no fills yet).
 function PairExposureList({ exposure }: { exposure: Record<string, number> }) {
+  const t = useT();
   const entries = Object.entries(exposure)
     .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1]);
 
   if (entries.length === 0) {
-    return <p className="text-xs text-text-muted">No open positions</p>;
+    return <p className="text-xs text-text-muted">{t('overview.noOpenPositions')}</p>;
   }
 
   const total = entries.reduce((s, [, v]) => s + v, 0);

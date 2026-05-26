@@ -9,6 +9,7 @@ import { api } from '@/lib/api-client';
 import { Button } from '@/components/primitives/button';
 import { Card } from '@/components/primitives/card';
 import { BotCard } from '@/components/bot-card';
+import { useT } from '@/i18n';
 
 const CreateBotWizard = lazy(() =>
   import('@/components/create-bot-wizard').then((m) => ({
@@ -17,6 +18,7 @@ const CreateBotWizard = lazy(() =>
 );
 
 export function BotsListPage() {
+  const t = useT();
   const botsQuery = useQuery({
     queryKey: ['bots'],
     queryFn: () => api.getBots(),
@@ -28,7 +30,6 @@ export function BotsListPage() {
 
   const [wizardOpen, setWizardOpen] = useState(false);
 
-  // E.2: listen for keyboard shortcut `n b` dispatched from AppShell
   useEffect(() => {
     const handler = () => setWizardOpen(true);
     window.addEventListener('wizard:open', handler);
@@ -52,7 +53,7 @@ export function BotsListPage() {
     return (
       <Card className="border-danger/40">
         <h2 className="text-lg font-semibold text-danger mb-2">
-          Failed to load bots
+          {t('overview.failedToLoad')}
         </h2>
         <p className="text-sm text-text-muted">
           {(botsQuery.error as Error).message}
@@ -70,15 +71,20 @@ export function BotsListPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Bots</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t('nav.bots')}
+          </h1>
           <p className="text-sm text-text-muted mt-1">
-            {bots.length} {bots.length === 1 ? 'bot' : 'bots'} ·{' '}
-            <span className="text-success">{runningCount} running</span>
+            {t(bots.length === 1 ? 'overview.botCount' : 'overview.botCountPlural', { count: bots.length })}
+            {' · '}
+            <span className="text-success">
+              {t('overview.runningCount', { count: runningCount })}
+            </span>
           </p>
         </div>
         <Button onClick={() => setWizardOpen(true)}>
           <Plus className="size-4" />
-          New bot
+          {t('overview.newBot')}
         </Button>
       </div>
 
@@ -94,9 +100,9 @@ export function BotsListPage() {
           <div className="size-12 rounded-full bg-bg-elevated flex items-center justify-center">
             <Plus className="size-6" />
           </div>
-          <div className="text-sm font-semibold">Create new bot</div>
+          <div className="text-sm font-semibold">{t('overview.createNewBot')}</div>
           <div className="text-2xs text-center max-w-[200px]">
-            Launch a new grid bot with the wizard
+            {t('overview.createNewBotSub')}
           </div>
         </button>
       </div>
@@ -105,11 +111,13 @@ export function BotsListPage() {
         <div className="flex flex-col gap-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-text-secondary">
-              History
+              {t('bots.history')}
             </h2>
             <p className="text-sm text-text-muted mt-0.5">
-              {stoppedBots.length} closed{' '}
-              {stoppedBots.length === 1 ? 'bot' : 'bots'}
+              {t(
+                stoppedBots.length === 1 ? 'bots.closedCount' : 'bots.closedCountPlural',
+                { count: stoppedBots.length }
+              )}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 opacity-75">

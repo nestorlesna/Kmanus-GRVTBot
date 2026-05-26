@@ -18,6 +18,7 @@ import {
   formatUsd,
 } from '@/lib/format';
 import type { BotSummary } from '@/lib/api-types';
+import { useT } from '@/i18n';
 
 interface BotTick {
   status: BotSummary['status'];
@@ -33,6 +34,7 @@ interface BotCardProps {
 }
 
 export function BotCard({ bot }: BotCardProps) {
+  const t = useT();
   // Per-card WS subscription. Each card listens to its own bot:N channel
   // so the parent (Overview / BotsList) doesn't need a hardcoded bot id
   // or a global tick map. The hook is stable per card instance.
@@ -91,7 +93,7 @@ export function BotCard({ bot }: BotCardProps) {
         {/* Equity hero */}
         <div className="mb-1">
           <span className="text-2xs uppercase tracking-wider text-text-muted">
-            Equity
+            {t('bots.cardEquity')}
           </span>
         </div>
         <div className="flex items-baseline gap-3 mb-2">
@@ -109,17 +111,17 @@ export function BotCard({ bot }: BotCardProps) {
         {/* Stats grid */}
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
           <SummaryRow
-            label="Position"
+            label={t('bots.cardPosition')}
             value={`${formatSize(positionSize)} @ ${formatUsd(avgEntry)}`}
           />
           <SummaryRow
-            label="Range"
+            label={t('bots.cardRange')}
             value={`${formatUsd(bot.lower_price)}–${formatUsd(bot.upper_price)}`}
           />
-          <SummaryRow label="Grids" value={`${bot.num_grids} levels`} />
-          <SummaryRow label="Realized" value={formatPnl(gridProfit)} />
-          <SummaryRow label="Unrealized" value={formatPnl(trendPnl)} />
-          <SummaryRow label="Investment" value={formatUsd(bot.investment_usdt)} />
+          <SummaryRow label={t('bots.cardGrids')} value={t('bots.cardLevels', { n: bot.num_grids })} />
+          <SummaryRow label={t('bots.cardRealized')} value={formatPnl(gridProfit)} />
+          <SummaryRow label={t('bots.cardUnrealized')} value={formatPnl(trendPnl)} />
+          <SummaryRow label={t('bots.cardInvestment')} value={formatUsd(bot.investment_usdt)} />
         </dl>
       </Card>
     </Link>

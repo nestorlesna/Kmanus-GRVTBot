@@ -14,6 +14,7 @@ import { Button } from './primitives/button';
 import { Input } from './primitives/input';
 import { Modal } from './primitives/modal';
 import { useConfirm } from './primitives/confirm-dialog';
+import { useT } from '@/i18n';
 
 interface AddState {
   label: string;
@@ -36,6 +37,7 @@ const INITIAL_ADD: AddState = {
 };
 
 export function SubAccountsCard() {
+  const t = useT();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [addOpen, setAddOpen] = useState(false);
@@ -47,27 +49,30 @@ export function SubAccountsCard() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (body: AddState) => api.createSubAccount(body),
+    mutationFn: (body: AddState) =>
+      api.createSubAccount({
+        ...body,
+        subAccountId: body.subAccountId.trim() || undefined,
+      }),
     onSuccess: () => {
-      toast.success('Sub-account added');
+      toast.success(t('settings.subAccounts.added'));
       setAddOpen(false);
       setAddState(INITIAL_ADD);
       queryClient.invalidateQueries({ queryKey: ['sub-accounts'] });
     },
     onError: (err: Error) => {
-      // The backend returns the precise GRVT failure stage when the
-      // login test fails — surface it verbatim.
-      toast.error(err.message || 'Failed to add sub-account');
+      toast.error(err.message || t('settings.subAccounts.addFailed'));
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.deleteSubAccount(id),
     onSuccess: () => {
-      toast.success('Sub-account removed');
+      toast.success(t('settings.subAccounts.removed'));
       queryClient.invalidateQueries({ queryKey: ['sub-accounts'] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) =>
+      toast.error(err.message || t('settings.subAccounts.removeFailed')),
   });
 
   const setDefaultMutation = useMutation({
@@ -79,21 +84,21 @@ export function SubAccountsCard() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Sub-account is optional here too (backend falls back to accountId).
   const canSubmit =
     addState.label.length > 0 &&
     addState.apiKey.length > 0 &&
     /^0x[0-9a-fA-F]{64}$/.test(addState.apiSecret) &&
     /^0x[0-9a-fA-F]{40}$/.test(addState.tradingAddress) &&
     addState.accountId.length > 0 &&
-    addState.subAccountId.length > 0 &&
     !createMutation.isPending;
 
   async function handleDelete(id: number, label: string) {
     const ok = await confirm({
       variant: 'destructive',
-      title: `Remove "${label}"?`,
-      body: 'Bots using this sub-account must be closed first; otherwise the request will be rejected.',
-      confirmLabel: 'Remove',
+      title: t('settings.subAccounts.confirmRemoveTitle', { label }),
+      body: t('settings.subAccounts.confirmRemoveBody'),
+      confirmLabel: t('settings.subAccounts.confirmRemoveBtn'),
     });
     if (!ok) return;
     deleteMutation.mutate(id);
@@ -105,27 +110,29 @@ export function SubAccountsCard() {
     <>
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">GRVT Sub-Accounts</h2>
+          <h2 className="text-sm font-semibold">
+            {t('settings.subAccounts.title')}
+          </h2>
           <Button
             variant="secondary"
             onClick={() => setAddOpen(true)}
             className="text-xs"
           >
             <Plus className="size-3.5 mr-1 inline" />
-            Add
+            {t('settings.subAccounts.addBtn')}
           </Button>
         </div>
         <p className="text-2xs text-text-muted mb-3">
-          Connect additional GRVT sub-accounts to run isolated strategies.
-          Bots can pick which sub-account to trade against. Same encryption
-          as your default credentials (AES-256-GCM).
+          {t('settings.subAccounts.subtitle')}
         </p>
 
         {listQuery.isLoading ? (
-          <p className="text-2xs text-text-muted">Loading…</p>
+          <p className="text-2xs text-text-muted">
+            {t('settings.subAccounts.loading')}
+          </p>
         ) : subs.length === 0 ? (
           <p className="text-2xs text-text-muted italic">
-            No sub-accounts yet. Your bots use your default credentials.
+            {t('settings.subAccounts.empty')}
           </p>
         ) : (
           <ul className="divide-y divide-border-subtle">
@@ -140,12 +147,12 @@ export function SubAccountsCard() {
                   </span>
                   {s.isDefault && (
                     <span className="text-2xs text-primary uppercase tracking-wider">
-                      Default
+                      {t('settings.subAccounts.default')}
                     </span>
                   )}
                   {s.lastTestOk === false && (
                     <span className="text-2xs text-warning">
-                      last test failed
+                      {t('settings.subAccounts.lastTestFailed')}
                     </span>
                   )}
                 </div>
@@ -156,8 +163,8 @@ export function SubAccountsCard() {
                       onClick={() => setDefaultMutation.mutate(s.id)}
                       disabled={setDefaultMutation.isPending}
                       className="p-1 text-text-muted hover:text-primary transition-colors"
-                      aria-label="Set as default"
-                      title="Set as default"
+                      aria-label={t('settings.subAccounts.starHint')}
+                      title={t('settings.subAccounts.starHint')}
                     >
                       <Star className="size-3.5" />
                     </button>
@@ -167,8 +174,8 @@ export function SubAccountsCard() {
                     onClick={() => handleDelete(s.id, s.label)}
                     disabled={deleteMutation.isPending}
                     className="p-1 text-text-muted hover:text-danger transition-colors"
-                    aria-label="Remove"
-                    title="Remove"
+                    aria-label={t('settings.subAccounts.removeHint')}
+                    title={t('settings.subAccounts.removeHint')}
                   >
                     <Trash2 className="size-3.5" />
                   </button>
@@ -187,8 +194,8 @@ export function SubAccountsCard() {
             setAddState(INITIAL_ADD);
           }
         }}
-        title="Add GRVT sub-account"
-        description="Credentials are tested against GRVT before saving."
+        title={t('settings.subAccounts.modalTitle')}
+        description={t('settings.subAccounts.modalDescription')}
         footer={
           <>
             <Button
@@ -199,22 +206,24 @@ export function SubAccountsCard() {
               }}
               disabled={createMutation.isPending}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="primary"
               disabled={!canSubmit}
               onClick={() => createMutation.mutate(addState)}
             >
-              {createMutation.isPending ? 'Testing…' : 'Add'}
+              {createMutation.isPending
+                ? t('settings.subAccounts.modalTesting')
+                : t('settings.subAccounts.modalConfirm')}
             </Button>
           </>
         }
       >
         <div className="space-y-3">
           <Input
-            label="Label"
-            placeholder="e.g. Strategy A"
+            label={t('settings.subAccounts.label')}
+            placeholder={t('settings.subAccounts.labelPlaceholder')}
             value={addState.label}
             onChange={(e) =>
               setAddState({ ...addState, label: e.target.value })
@@ -223,7 +232,7 @@ export function SubAccountsCard() {
             autoComplete="off"
           />
           <Input
-            label="API Key"
+            label={t('settings.subAccounts.apiKey')}
             value={addState.apiKey}
             onChange={(e) =>
               setAddState({ ...addState, apiKey: e.target.value })
@@ -232,7 +241,7 @@ export function SubAccountsCard() {
             autoComplete="off"
           />
           <Input
-            label="API Secret (private key, 0x...)"
+            label={t('settings.subAccounts.apiSecret')}
             type="password"
             value={addState.apiSecret}
             onChange={(e) =>
@@ -243,12 +252,12 @@ export function SubAccountsCard() {
             error={
               addState.apiSecret &&
               !/^0x[0-9a-fA-F]{64}$/.test(addState.apiSecret)
-                ? '0x-prefixed 32-byte hex string expected'
+                ? t('settings.subAccounts.apiSecretError')
                 : undefined
             }
           />
           <Input
-            label="Trading Address (0x...)"
+            label={t('settings.subAccounts.tradingAddress')}
             value={addState.tradingAddress}
             onChange={(e) =>
               setAddState({ ...addState, tradingAddress: e.target.value })
@@ -258,12 +267,12 @@ export function SubAccountsCard() {
             error={
               addState.tradingAddress &&
               !/^0x[0-9a-fA-F]{40}$/.test(addState.tradingAddress)
-                ? '0x-prefixed Ethereum address expected'
+                ? t('settings.subAccounts.tradingAddressError')
                 : undefined
             }
           />
           <Input
-            label="Account ID"
+            label={t('settings.subAccounts.accountId')}
             value={addState.accountId}
             onChange={(e) =>
               setAddState({ ...addState, accountId: e.target.value })
@@ -271,15 +280,20 @@ export function SubAccountsCard() {
             disabled={createMutation.isPending}
             autoComplete="off"
           />
-          <Input
-            label="Sub-Account ID"
-            value={addState.subAccountId}
-            onChange={(e) =>
-              setAddState({ ...addState, subAccountId: e.target.value })
-            }
-            disabled={createMutation.isPending}
-            autoComplete="off"
-          />
+          <div className="space-y-1">
+            <Input
+              label={t('settings.subAccounts.subAccountId')}
+              value={addState.subAccountId}
+              onChange={(e) =>
+                setAddState({ ...addState, subAccountId: e.target.value })
+              }
+              disabled={createMutation.isPending}
+              autoComplete="off"
+            />
+            <p className="text-2xs text-text-muted px-1">
+              {t('settings.subAccounts.subAccountIdHint')}
+            </p>
+          </div>
           <label className="flex items-center gap-2 text-xs">
             <input
               type="checkbox"
@@ -289,7 +303,7 @@ export function SubAccountsCard() {
               }
               disabled={createMutation.isPending}
             />
-            <span>Mark as default sub-account</span>
+            <span>{t('settings.subAccounts.setDefault')}</span>
           </label>
         </div>
       </Modal>

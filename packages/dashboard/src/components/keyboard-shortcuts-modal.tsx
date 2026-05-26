@@ -2,16 +2,17 @@
 // Opened by pressing `?` anywhere in the app.
 
 import { Modal } from './primitives/modal';
+import { useT } from '@/i18n';
 
-const SHORTCUTS = [
-  { keys: 'g → o', action: 'Go to Overview' },
-  { keys: 'g → b', action: 'Go to Bots' },
-  { keys: 'g → s', action: 'Go to Settings' },
-  { keys: 'n → b', action: 'New Bot (open wizard)' },
-  { keys: 't', action: 'Toggle light/dark theme' },
-  { keys: '?', action: 'Show this help' },
-  { keys: 'Esc', action: 'Close modal / dialog' },
-] as const;
+const SHORTCUTS: Array<{ keys: string; actionKey: string }> = [
+  { keys: 'g → o', actionKey: 'keyboard.goToOverview' },
+  { keys: 'g → b', actionKey: 'keyboard.goToBots' },
+  { keys: 'g → s', actionKey: 'keyboard.goToSettings' },
+  { keys: 'n → b', actionKey: 'keyboard.createBot' },
+  { keys: 't', actionKey: 'keyboard.toggleTheme' },
+  { keys: '?', actionKey: 'keyboard.showShortcuts' },
+  { keys: 'Esc', actionKey: 'keyboard.close' },
+];
 
 interface Props {
   open: boolean;
@@ -19,17 +20,22 @@ interface Props {
 }
 
 export function KeyboardShortcutsModal({ open, onClose }: Props) {
+  const t = useT();
   return (
-    <Modal open={open} onClose={onClose} title="Keyboard shortcuts">
+    <Modal open={open} onClose={onClose} title={t('keyboard.title')}>
       <table className="w-full text-sm">
         <tbody>
-          {SHORTCUTS.map(({ keys, action }) => (
+          {SHORTCUTS.map(({ keys, actionKey }) => (
             <tr key={keys} className="border-b border-border-subtle last:border-0">
               <td className="py-2.5 pr-4">
-                <span className="inline-flex gap-1">
+                <span className="inline-flex gap-1 items-center">
                   {keys.split(' → ').map((k, i) => (
-                    <span key={i}>
-                      {i > 0 && <span className="text-text-muted mx-0.5">then</span>}
+                    <span key={i} className="inline-flex items-center gap-1">
+                      {i > 0 && (
+                        <span className="text-text-muted mx-0.5">
+                          {t('keyboard.then')}
+                        </span>
+                      )}
                       <kbd className="px-1.5 py-0.5 rounded bg-bg-muted border border-border-subtle text-2xs font-mono font-semibold text-text-secondary">
                         {k}
                       </kbd>
@@ -37,7 +43,7 @@ export function KeyboardShortcutsModal({ open, onClose }: Props) {
                   ))}
                 </span>
               </td>
-              <td className="py-2.5 text-text-muted">{action}</td>
+              <td className="py-2.5 text-text-muted">{t(actionKey)}</td>
             </tr>
           ))}
         </tbody>

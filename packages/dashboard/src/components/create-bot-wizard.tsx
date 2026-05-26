@@ -30,6 +30,7 @@ import {
 } from '@/lib/format';
 import type { ValidateBotInput, ValidateBotResult } from '@/lib/api-types';
 import { cn } from '@/lib/cn';
+import { useT } from '@/i18n';
 
 // Optional preset handed in from /backtest "Apply to wizard". Only the
 // numeric grid params — safety knobs (compound, SL/TP, safeguard) still
@@ -102,7 +103,12 @@ const FALLBACK_PAIRS = [
 ];
 
 type Step = 0 | 1 | 2 | 3;
-const STEP_LABELS = ['Pair', 'Range', 'Config', 'Confirm'];
+const STEP_LABEL_KEYS = [
+  'wizard.stepPair',
+  'wizard.stepRange',
+  'wizard.stepConfig',
+  'wizard.stepConfirm',
+];
 
 function applyPreset(preset?: WizardPreset): WizardState {
   if (!preset) return INITIAL_STATE;
@@ -119,6 +125,7 @@ function applyPreset(preset?: WizardPreset): WizardState {
 }
 
 export function CreateBotWizard({ open, onClose, preset }: CreateBotWizardProps) {
+  const t = useT();
   const [step, setStep] = useState<Step>(0);
   const [state, setState] = useState<WizardState>(() => applyPreset(preset));
   const [validated, setValidated] = useState<ValidateBotResult | null>(null);
@@ -160,16 +167,13 @@ export function CreateBotWizard({ open, onClose, preset }: CreateBotWizardProps)
   const createMutation = useMutation({
     mutationFn: (input: ValidateBotInput) => api.createBot(input),
     onSuccess: (result) => {
-      toast.success(`Bot ${result.id} created (paused). Review and Start when ready.`);
-      // Refresh the bots list so the new card appears immediately on Overview.
+      toast.success(t('wizard.botCreatedToast', { id: result.id }));
       void queryClient.invalidateQueries({ queryKey: ['bots'] });
-      // Navigate to the new bot's detail page so the user can review +
-      // explicitly press Start.
       navigate(`/bots/${result.id}`);
       handleClose();
     },
     onError: (err: Error) => {
-      toast.error(`Bot creation failed: ${err.message}`);
+      toast.error(t('wizard.createFailedToast', { msg: err.message }));
     },
   });
 
@@ -313,22 +317,25 @@ export function CreateBotWizard({ open, onClose, preset }: CreateBotWizardProps)
       open={open}
       onClose={handleClose}
       size="wide"
-      title="Create a new bot"
-      description={`Step ${step + 1} of 4 — ${STEP_LABELS[step]}`}
+      title={t('wizard.title')}
+      description={t('wizard.modalDesc', {
+        n: step + 1,
+        step: t(STEP_LABEL_KEYS[step]),
+      })}
       footer={
         <>
           <Button variant="ghost" onClick={handleClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           {step > 0 && (
             <Button variant="secondary" onClick={back}>
               <ChevronLeft className="size-4" />
-              Back
+              {t('common.back')}
             </Button>
           )}
           {step < 3 ? (
             <Button onClick={next} disabled={!canNext}>
-              Continue
+              {t('wizard.continueBtn')}
               <ChevronRight className="size-4" />
             </Button>
           ) : (
@@ -338,7 +345,9 @@ export function CreateBotWizard({ open, onClose, preset }: CreateBotWizardProps)
               onClick={handleCreate}
             >
               <Check className="size-4" />
-              {createMutation.isPending ? 'Creating…' : 'Create bot (paused)'}
+              {createMutation.isPending
+                ? t('wizard.creatingShort')
+                : t('wizard.createPaused')}
             </Button>
           )}
         </>
@@ -373,13 +382,14 @@ export function CreateBotWizard({ open, onClose, preset }: CreateBotWizardProps)
 // ── Stepper ──────────────────────────────────────────────────────────────
 
 function Stepper({ step }: { step: Step }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-2 mb-2">
-      {STEP_LABELS.map((label, i) => {
+      {STEP_LABEL_KEYS.map((labelKey, i) => {
         const active = i === step;
         const completed = i < step;
         return (
-          <div key={label} className="flex items-center gap-2 flex-1">
+          <div key={labelKey} className="flex items-center gap-2 flex-1">
             <div
               className={cn(
                 'size-6 rounded-full flex items-center justify-center text-2xs font-semibold',
@@ -396,9 +406,9 @@ function Stepper({ step }: { step: Step }) {
                 active ? 'text-text-primary font-semibold' : 'text-text-muted'
               )}
             >
-              {label}
+              {t(labelKey)}
             </span>
-            {i < STEP_LABELS.length - 1 && (
+            {i < STEP_LABEL_KEYS.length - 1 && (
               <div className="flex-1 h-px bg-border-subtle" />
             )}
           </div>
@@ -421,6 +431,7 @@ function StepPair({
   pairs: Array<{ value: string; label: string }>;
   subAccounts: Array<{ id: number; label: string; isDefault: boolean }>;
 }) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -439,32 +450,32 @@ function StepPair({
       {subAccounts.length > 0 && (
         <div className="mb-5">
           <h3 className="text-sm font-semibold text-text-primary mb-2">
-            Sub-account
+            {t('wizard.subAccountTitle')}
           </h3>
           <select
             value={state.subAccountId}
             onChange={(e) => update('subAccountId', e.target.value)}
             className="w-full h-10 rounded-md border border-border-subtle bg-bg-surface px-3 text-sm text-text-primary"
           >
-            <option value="">Default credentials</option>
+            <option value="">{t('wizard.subAccountDefault')}</option>
             {subAccounts.map((s) => (
               <option key={s.id} value={String(s.id)}>
                 {s.label}
-                {s.isDefault ? ' (Default)' : ''}
+                {s.isDefault ? ` (${t('settings.subAccounts.default')})` : ''}
               </option>
             ))}
           </select>
           <p className="text-2xs text-text-muted mt-1">
-            Bot will trade against the selected GRVT sub-account.
+            {t('wizard.subAccountHelp')}
           </p>
         </div>
       )}
 
       <h3 className="text-sm font-semibold text-text-primary mb-3">
-        Select instrument
+        {t('wizard.selectInstrument')}
       </h3>
       <Input
-        placeholder={`Search ${pairs.length} pairs (e.g. SOL, DOGE, BTC)`}
+        placeholder={t('wizard.searchPairs', { n: pairs.length })}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="mb-3"
@@ -488,7 +499,7 @@ function StepPair({
               >
                 <div className="font-semibold text-sm">{p.label}</div>
                 <div className="text-2xs text-text-muted mt-1">
-                  Min size 0.001 · Max leverage 50x
+                  {t('wizard.pairMinMax')}
                 </div>
               </button>
             );
@@ -496,17 +507,17 @@ function StepPair({
         </div>
         {filtered.length === 0 && (
           <p className="text-sm text-text-muted text-center py-8">
-            No pairs match "{query}"
+            {t('wizard.noPairsMatch', { q: query })}
           </p>
         )}
       </div>
       <p className="mt-4 text-2xs text-text-muted">
-        {filtered.length} of {pairs.length} pairs shown
+        {t('wizard.pairsShown', { shown: filtered.length, total: pairs.length })}
       </p>
 
       <div className="mt-6">
         <h3 className="text-sm font-semibold text-text-primary mb-3">
-          Direction
+          {t('wizard.directionHeading')}
         </h3>
         <div className="flex gap-2">
           {(['long', 'short'] as const).map((d) => (
@@ -541,6 +552,7 @@ function StepRange({
   state: WizardState;
   update: <K extends keyof WizardState>(k: K, v: WizardState[K]) => void;
 }) {
+  const t = useT();
   const lo = parseFloat(state.lower);
   const hi = parseFloat(state.upper);
   const valid = Number.isFinite(lo) && Number.isFinite(hi) && lo > 0 && hi > lo;
@@ -549,15 +561,12 @@ function StepRange({
   return (
     <div>
       <h3 className="text-sm font-semibold text-text-primary mb-3">
-        Set price range
+        {t('wizard.setRange')}
       </h3>
       <p className="text-xs text-text-muted mb-4">
-        Define the price band where the bot will place orders. Wider ranges
-        trade less often but are safer; narrow ranges fill faster but exit the
-        range sooner.
+        {t('wizard.rangeHelp')}
       </p>
 
-      {/* E.8: Interactive chart with draggable range lines */}
       <RangePickerChart
         pair={state.pair}
         lower={lo || 0}
@@ -568,14 +577,14 @@ function StepRange({
 
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Lower price (USDT)"
+          label={t('wizard.lowerPriceUsdt')}
           numeric
           inputMode="decimal"
           value={state.lower}
           onChange={(e) => update('lower', e.target.value)}
         />
         <Input
-          label="Upper price (USDT)"
+          label={t('wizard.upperPriceUsdt')}
           numeric
           inputMode="decimal"
           value={state.upper}
@@ -584,11 +593,11 @@ function StepRange({
       </div>
       {valid ? (
         <p className="mt-4 text-xs text-text-muted">
-          Range width: <Mono className="text-text-secondary">{widthPct}%</Mono>
+          {t('wizard.rangeWidth')} <Mono className="text-text-secondary">{widthPct}%</Mono>
         </p>
       ) : (
         <p className="mt-4 text-xs text-danger">
-          Lower price must be greater than 0 and below upper price.
+          {t('wizard.rangeInvalid')}
         </p>
       )}
     </div>
@@ -604,21 +613,22 @@ function StepConfig({
   state: WizardState;
   update: <K extends keyof WizardState>(k: K, v: WizardState[K]) => void;
 }) {
+  const t = useT();
   return (
     <div>
       <h3 className="text-sm font-semibold text-text-primary mb-3">
-        Capital and grid configuration
+        {t('wizard.capitalAndGrid')}
       </h3>
       <div className="grid grid-cols-3 gap-4">
         <Input
-          label="Investment (USDT)"
+          label={t('wizard.investment')}
           numeric
           inputMode="decimal"
           value={state.investment}
           onChange={(e) => update('investment', e.target.value)}
         />
         <Input
-          label="Leverage"
+          label={t('wizard.leverage')}
           numeric
           inputMode="numeric"
           value={state.leverage}
@@ -626,7 +636,7 @@ function StepConfig({
           helper="1x – 50x"
         />
         <Input
-          label="Grid count"
+          label={t('wizard.gridCount')}
           numeric
           inputMode="numeric"
           value={state.grids}
@@ -646,19 +656,17 @@ function StepConfig({
           />
           <div className="flex-1">
             <div className="text-sm font-semibold text-text-primary">
-              Enable virtual grids (break 80-order limit)
+              {t('wizard.virtualToggle')}
             </div>
             <div className="text-xs text-text-muted mt-0.5">
-              GRVT caps open orders at 80/instrument. Virtual grids let you define
-              up to 500 conceptual levels; only the N closest to market price are
-              placed as real orders, and the window rotates as price moves.
+              {t('wizard.virtualDesc')}
             </div>
           </div>
         </label>
         {state.virtualEnabled && (
           <div className="mt-4 grid grid-cols-2 gap-4 pl-7">
             <Input
-              label="Active window size"
+              label={t('wizard.activeWindow')}
               numeric
               inputMode="numeric"
               value={state.activeWindowSize}
@@ -670,7 +678,7 @@ function StepConfig({
       </div>
       <div className="mt-4">
         <Input
-          label="Reinvest profit %"
+          label={t('wizard.reinvestPct')}
           numeric
           inputMode="numeric"
           value={state.compoundPct}
@@ -679,14 +687,13 @@ function StepConfig({
         />
       </div>
       <p className="mt-4 text-xs text-text-muted">
-        Effective notional ={' '}
+        {t('wizard.effectiveNotional')}{' '}
         <Mono className="text-text-secondary">
           {formatUsd(
             parseFloat(state.investment || '0') * parseInt(state.leverage || '0', 10)
           )}
         </Mono>
-        . The next step validates the config and computes spacing, qty/level
-        and liquidation distance.
+        {t('wizard.effectiveNotionalEnd')}
       </p>
 
       <div className="mt-6 rounded-md border border-border-subtle bg-bg-muted/40 p-4">
@@ -699,11 +706,10 @@ function StepConfig({
           />
           <div className="flex-1">
             <div className="text-sm font-semibold text-text-primary">
-              Enable liquidation safeguard
+              {t('wizard.safeguardToggle')}
             </div>
             <div className="text-xs text-text-muted mt-0.5">
-              Auto-pause this bot when the mark price gets within the chosen
-              distance of its estimated liquidation price.
+              {t('wizard.safeguardDesc')}
             </div>
           </div>
         </label>
@@ -711,16 +717,16 @@ function StepConfig({
         {state.safeguardEnabled && (
           <div className="mt-4 grid grid-cols-2 gap-4 pl-7">
             <Input
-              label="Threshold (%)"
+              label={t('wizard.safeguardThreshold')}
               numeric
               inputMode="decimal"
               value={state.safeguardThresholdPct}
               onChange={(e) => update('safeguardThresholdPct', e.target.value)}
-              helper="1 – 50. Triggers when distance to liq ≤ this %"
+              helper="1 – 50"
             />
             <div>
               <label className="block text-2xs uppercase tracking-wider text-text-muted mb-1">
-                Action on trigger
+                {t('wizard.safeguardActionLabel')}
               </label>
               <select
                 className="w-full h-9 rounded-md border border-border-subtle bg-bg-base px-2 text-sm text-text-primary"
@@ -729,8 +735,8 @@ function StepConfig({
                   update('safeguardAction', e.target.value as 'pause' | 'pause_close')
                 }
               >
-                <option value="pause">Pause only (keep position)</option>
-                <option value="pause_close">Pause and close position</option>
+                <option value="pause">{t('wizard.safeguardPauseOnly')}</option>
+                <option value="pause_close">{t('wizard.safeguardPauseClose')}</option>
               </select>
             </div>
             <p className="col-span-2 text-2xs text-text-muted flex items-start gap-1.5">
@@ -747,24 +753,21 @@ function StepConfig({
       {/* H.3: Stop-loss / Take-profit */}
       <div className="mt-4 grid grid-cols-2 gap-4">
         <Input
-          label="Stop-loss (%)"
+          label={t('wizard.slLabel')}
           numeric
           inputMode="decimal"
           value={state.slPct}
           onChange={(e) => update('slPct', e.target.value)}
-          helper="Close bot if loss exceeds this % of investment. Empty = disabled."
         />
         <Input
-          label="Take-profit (%)"
+          label={t('wizard.tpLabel')}
           numeric
           inputMode="decimal"
           value={state.tpPct}
           onChange={(e) => update('tpPct', e.target.value)}
-          helper="Close bot if profit exceeds this % of investment. Empty = disabled."
         />
       </div>
 
-      {/* H.2: Auto-shift range */}
       <div className="mt-4 rounded-md border border-border-subtle bg-bg-muted/40 p-4">
         <label className="flex items-start gap-3 cursor-pointer">
           <input
@@ -775,22 +778,21 @@ function StepConfig({
           />
           <div className="flex-1">
             <div className="text-sm font-semibold text-text-primary">
-              Auto-shift range
+              {t('wizard.autoShiftToggle')}
             </div>
             <div className="text-xs text-text-muted mt-0.5">
-              Automatically recenter the grid when price moves beyond the range boundary.
+              {t('wizard.autoShiftDesc')}
             </div>
           </div>
         </label>
         {state.autoShiftEnabled && (
           <div className="mt-3 pl-7">
             <Input
-              label="Shift threshold (%)"
+              label={t('wizard.shiftThreshold')}
               numeric
               inputMode="decimal"
               value={state.autoShiftPct}
               onChange={(e) => update('autoShiftPct', e.target.value)}
-              helper="Trigger shift when price exits range by this % of range width"
             />
           </div>
         )}
@@ -814,10 +816,11 @@ function StepConfirm({
   isValidating: boolean;
   error: Error | null;
 }) {
+  const t = useT();
   if (isValidating) {
     return (
       <div className="text-sm text-text-muted py-8 text-center animate-pulse">
-        Validating configuration…
+        {t('wizard.validating')}
       </div>
     );
   }
@@ -828,7 +831,7 @@ function StepConfirm({
         <div className="flex items-start gap-2 text-danger">
           <AlertTriangle className="size-4 shrink-0 mt-0.5" />
           <div>
-            <div className="text-sm font-semibold">Validation failed</div>
+            <div className="text-sm font-semibold">{t('wizard.validationFailed')}</div>
             <div className="text-xs mt-1">{error.message}</div>
           </div>
         </div>
@@ -843,37 +846,37 @@ function StepConfirm({
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-text-primary">
-        Review and create
+        {t('wizard.reviewAndCreate')}
       </h3>
 
       <SummaryGrid>
-        <SummaryItem label="Pair" value={validated.pair} mono={false} />
-        <SummaryItem label="Direction" value={validated.direction.toUpperCase()} mono={false} />
-        <SummaryItem label="Leverage" value={`${validated.input.leverage}x`} />
+        <SummaryItem label={t('wizard.sumPair')} value={validated.pair} mono={false} />
+        <SummaryItem label={t('wizard.sumDirection')} value={validated.direction.toUpperCase()} mono={false} />
+        <SummaryItem label={t('wizard.sumLeverage')} value={`${validated.input.leverage}x`} />
         <SummaryItem
-          label="Range"
+          label={t('wizard.sumRange')}
           value={`${formatUsd(validated.input.lower)} — ${formatUsd(validated.input.upper)}`}
         />
-        <SummaryItem label="Grids" value={`${validated.input.grids} levels`} />
-        <SummaryItem label="Investment" value={formatUsd(validated.input.investment)} />
+        <SummaryItem label={t('wizard.sumGrids')} value={t('wizard.sumLevels', { n: validated.input.grids })} />
+        <SummaryItem label={t('wizard.sumInvestment')} value={formatUsd(validated.input.investment)} />
       </SummaryGrid>
 
       <hr className="border-border-subtle" />
 
       <h4 className="text-2xs uppercase tracking-wider text-text-muted">
-        Computed parameters
+        {t('wizard.computedParams')}
       </h4>
       <SummaryGrid>
-        <SummaryItem label="Spacing" value={`${formatUsd(c.spacing)} (${c.spacingPct}%)`} />
-        <SummaryItem label="Qty / level" value={formatSize(c.qtyPerLevel)} />
-        <SummaryItem label="Notional" value={formatUsd(c.notional)} />
-        <SummaryItem label="Profit / round-trip" value={formatPnl(c.profitPerRoundTrip)} />
+        <SummaryItem label={t('wizard.sumSpacing')} value={`${formatUsd(c.spacing)} (${c.spacingPct}%)`} />
+        <SummaryItem label={t('wizard.sumQtyPerLevel')} value={formatSize(c.qtyPerLevel)} />
+        <SummaryItem label={t('wizard.sumNotional')} value={formatUsd(c.notional)} />
+        <SummaryItem label={t('wizard.sumProfitPerRt')} value={formatPnl(c.profitPerRoundTrip)} />
         <SummaryItem
-          label="Est. liquidation"
+          label={t('wizard.sumEstLiq')}
           value={formatUsd(c.liquidationEstimate)}
         />
         <SummaryItem
-          label="Liq. distance"
+          label={t('wizard.sumLiqDistance')}
           value={formatPercent(-c.liqDistancePct)}
         />
       </SummaryGrid>
@@ -883,7 +886,7 @@ function StepConfirm({
           <div className="flex items-start gap-2 text-warning text-xs">
             <AlertTriangle className="size-4 shrink-0 mt-0.5" />
             <div>
-              <div className="font-semibold">Warnings</div>
+              <div className="font-semibold">{t('wizard.warnings')}</div>
               <ul className="mt-1 space-y-0.5 list-disc list-inside">
                 {validated.warnings.map((w) => (
                   <li key={w}>{w}</li>
@@ -895,9 +898,7 @@ function StepConfirm({
       )}
 
       <div className="rounded-md border border-border-default bg-bg-surface p-3 text-xs text-text-muted">
-        ⓘ The bot will be created in <strong className="text-text-secondary">paused</strong>{' '}
-        state. No orders will be placed on GRVT until you explicitly press
-        Start from the bot detail page after reviewing the configuration.
+        {t('wizard.pausedBanner')}
       </div>
 
       <label className="flex items-start gap-2 text-xs text-text-secondary cursor-pointer">
@@ -908,8 +909,9 @@ function StepConfirm({
           className="mt-0.5 size-4 accent-primary"
         />
         <span>
-          I understand this bot will use real funds and risk liquidation up to{' '}
-          <Mono>{formatUsd(validated.input.investment)}</Mono>.
+          {t('wizard.acceptanceText')}{' '}
+          <Mono>{formatUsd(validated.input.investment)}</Mono>
+          {t('wizard.acceptanceTextEnd')}
         </span>
       </label>
     </div>
