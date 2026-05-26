@@ -287,15 +287,53 @@ export function createV2Router(deps: V2RouterDeps): Router {
   // version each user accepted. When you change the text, bump the
   // version string AND update the corresponding terms_text in the
   // dashboard signup form so the hash matches what was shown.
-  const SIGNUP_TOS_VERSION = '2026-04-09-v1';
-  const SIGNUP_TOS_TEXT = `By creating an account you confirm that:
-- This software trades real cryptocurrency on GRVT perpetual futures.
-- You can lose up to 100% of your invested capital. Leveraged trading carries significant risk.
-- The operator of this service is NOT a financial advisor, broker, or custodian. You are solely responsible for your trades.
-- The operator does NOT touch your funds. You provide your own GRVT API credentials and the bot trades on your sub-account.
-- No profit guarantees of any kind are made or implied.
-- The software is provided as-is, without warranty. Bugs, downtime, or exchange issues may cause losses.
-- You will not hold the operator liable for any losses.`;
+  const SIGNUP_TOS_VERSION = '2026-05-26-v2';
+  const SIGNUP_TOS_TEXT = `Terms of Use — please read carefully before creating an account.
+
+1. WHAT THIS SERVICE IS
+This is a self-hosted grid trading bot for the GRVT perpetual futures exchange. By signing up, you authorize the bot to place, modify, and cancel orders on your GRVT sub-account using API credentials you provide.
+
+2. WHAT THIS SERVICE IS NOT
+The operator is not a broker, custodian, financial advisor, fiduciary, exchange, or registered investment professional. No part of this service constitutes investment, legal, tax, or financial advice. The operator never holds your funds — your funds stay on your GRVT account at all times.
+
+3. YOUR RESPONSIBILITY
+You alone are responsible for: (a) every trade the bot executes under your account, (b) the configuration you choose (price range, leverage, grid count, investment size, safeguards), (c) the security of your GRVT account and API credentials, (d) any tax reporting on profits or losses, and (e) verifying that automated trading is legal in your jurisdiction.
+
+4. TRADING RISK — YOU CAN LOSE EVERYTHING
+Leveraged perpetual futures trading is extremely risky. You can lose up to 100% of the capital you allocate, and on leverage you can lose more than your initial position via liquidation, funding payments, or sudden market moves. The bot does not eliminate this risk — it automates execution of a strategy you choose. No profit is guaranteed, expected, or implied. Past performance of any sample, backtest, or other user's bot is not a predictor of your results.
+
+5. SOFTWARE PROVIDED "AS IS"
+The software is provided "as is" and "as available", without warranty of any kind — express, implied, statutory, or otherwise — including any warranty of merchantability, fitness for a particular purpose, accuracy, completeness, non-infringement, or uninterrupted operation. Bugs, mis-configurations, edge cases, race conditions, dependency vulnerabilities, and undocumented behavior may exist and may cause partial or total loss of funds.
+
+6. NO SERVICE LEVEL — DOWNTIME IS EXPECTED
+The operator makes no uptime commitment. The service may be paused, degraded, or shut down at any time, with or without notice, for maintenance, cost reasons, legal reasons, exchange outages, infrastructure failure, or no reason at all. During downtime your bots may stop trading, miss fills, fail to react to price moves, or leave open positions un-managed — any of which may cause loss.
+
+7. THIRD-PARTY DEPENDENCIES
+This service depends on: GRVT (exchange, API, matching engine, custody), the underlying blockchain network, internet infrastructure, the cloud provider hosting this server, the operating system, runtime libraries, and email delivery providers. The operator has no control over and accepts no responsibility for any failure, outage, change in terms, downtime, hack, exploit, slippage, or malicious behavior of any of these third parties. Risks include but are not limited to: GRVT outages, GRVT API rate limits or changes, exchange insolvency, smart contract bugs, network congestion, oracle failure, and DNS or TLS provider compromise.
+
+8. DATA HANDLING + ENCRYPTION
+The bot stores your email, a bcrypt hash of your password, and your GRVT API credentials encrypted at rest with AES-256-GCM. The master encryption key lives on the server's disk so the bot can decrypt credentials to place orders. THIS MEANS the server operator has technical access to decrypt your credentials, and any party who compromises the server (attacker, employee, hosting provider, law enforcement) may also gain that access. If you require zero third-party access to your keys, self-host your own copy of the software (see the GitHub repository). By using this hosted service you accept this exposure.
+
+9. SECURITY INCIDENTS
+In the event of a server compromise, data breach, credential theft, fund loss, or any other security incident — whether caused by an attacker, by a bug, by the operator, by an upstream provider, or by force majeure — you waive any claim against the operator for direct, indirect, incidental, consequential, special, punitive, or exemplary damages, including but not limited to lost funds, lost profits, lost opportunity, missed trades, liquidations, unwanted positions, regulatory fines, or reputational harm. You acknowledge that the operator's only obligation following an incident is to attempt timely notification — there is no compensation, refund, or insurance.
+
+10. LIMITATION OF LIABILITY
+To the maximum extent permitted by applicable law, in no event will the operator, contributors, or any affiliated party be liable to you or any third party for any claim, loss, damage, cost, or expense of any kind arising out of or related to your use of this service. This limitation applies regardless of the legal theory of liability (contract, tort, negligence, strict liability, or otherwise), regardless of whether the operator was advised of the possibility of such loss, and even if a remedy is found to have failed of its essential purpose. If any portion of this limitation is held unenforceable, the operator's total aggregate liability to you is capped at USD 1 (one US dollar).
+
+11. INDEMNIFICATION
+You agree to indemnify, defend, and hold harmless the operator and all contributors from any claim, demand, loss, liability, cost, or expense (including reasonable attorney fees) brought by any third party arising out of your use of the service, your violation of these terms, your violation of any law, or your infringement of any third party's rights.
+
+12. NO REVERSAL, NO REFUND
+There is no chargeback, refund, or rollback mechanism. Trades executed by the bot are final and settled on GRVT. The operator cannot reverse a trade, unwind a liquidation, recover stolen funds, or restore a lost API key.
+
+13. CHANGES TO THESE TERMS
+The operator may update these terms at any time. Continued use after an update constitutes acceptance of the new terms. Material changes will be surfaced on next login.
+
+14. TERMINATION
+The operator may suspend or terminate your account at any time, with or without cause, with or without notice. You may stop using the service and revoke your GRVT API keys at any time.
+
+15. ACCEPTANCE
+By clicking "I have read and accept the terms above" and creating an account, you confirm that you have read, understood, and agree to be bound by every clause above, that you are at least 18 years old, that you are using your own funds, and that you accept all risk of loss.`;
 
   // POST /api/v2/auth/signup — public.
   router.post('/auth/signup', SIGNUP_LIMITER, asyncHandler(async (req, res) => {

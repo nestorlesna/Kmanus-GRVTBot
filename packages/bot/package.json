@@ -2,6 +2,8 @@
   "name": "@grvt-grid/bot",
   "version": "0.1.0",
   "description": "GRVT grid bot engine + REST + WebSocket server",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
   "type": "module",
   "main": "dist/server.js",
   "scripts": {

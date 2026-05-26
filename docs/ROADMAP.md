@@ -89,6 +89,6 @@ Phase I (Lumina) waits for protocol maturity. No work scheduled.
 
 - **Bot 44**: ETH_USDT_Perp · LONG · 10x · 94 grids · realized $53+ · running
 - **Bot 48**: SOL_USDT_Perp · LONG · 10x · 120 virtual grids (window 70) · $100 invested · running
-- **VPS**: 46.62.149.136 port 3848 (caddy not in use; direct dashboard at `/dashboard/`)
-- **DB**: SQLite WAL at `/opt/grvt-grid-bot/data/grid_bot.db`
-- Service: systemd `grvt-grid-bot.service` (user `grvtbot`) + `grvt-grid-notifier.service`
+- **Hosting**: self-managed VPS behind Caddy reverse proxy + Let's Encrypt TLS
+- **DB**: SQLite WAL stored under the bot package's `data/` dir (`$GRID_BOT_DB`)
+- Services: systemd units `grvt-grid-bot.service` + `grvt-grid-notifier.service` running as a dedicated unprivileged user
