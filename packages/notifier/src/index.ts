@@ -451,7 +451,14 @@ class Notifier {
     const today = now.toISOString().slice(0, 10); // YYYY-MM-DD
     if (this.state.get().lastSummaryDate === today) return;
 
-    for (const bot of bots) {
+    // Only summarize running bots. Stopped/paused/error bots don't
+    // belong in the daily digest: stopped ones already fired their
+    // status_change notification when they closed and the user
+    // explicitly took them out of rotation, so re-summarizing them
+    // every morning is noise.
+    const activeBots = bots.filter((b) => b.status === 'running');
+
+    for (const bot of activeBots) {
       const snapshot = await this.db.getLatestSnapshot(bot.id);
       const yesterday: number | null = snapshot?.equity ?? null;
       await this.notify(dailySummaryTemplate(bot, snapshot, yesterday), {
@@ -462,7 +469,7 @@ class Notifier {
       });
     }
     this.state.update({ lastSummaryDate: today });
-    log.info({ today }, 'daily summary sent');
+    log.info({ today, count: activeBots.length, totalBots: bots.length }, 'daily summary sent');
   }
 
   async stop(): Promise<void> {
