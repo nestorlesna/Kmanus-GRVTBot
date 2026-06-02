@@ -1,167 +1,168 @@
-# GRVT Grid — Self-host install guide
+# GRVT Grid — Guía de instalación para autoalojamiento
 
-> **Audience**: people who want to run their own GRVT Grid bot on their own
-> server, with their own GRVT account, with their own keys. **No SaaS.** Your
-> trades, your keys, your liability.
+> **Público objetivo**: personas que quieren ejecutar su propio bot GRVT Grid
+> en su propio servidor, con su propia cuenta de GRVT, con sus propias
+> claves. **Sin SaaS.** Tus operaciones, tus claves, tu responsabilidad.
 
-## Prerequisites
+## Requisitos previos
 
-| Requirement | Why |
+| Requisito | Por qué |
 |---|---|
-| **A GRVT account registered through the project's referral link** | Required to get repo access and to keep the project sustainable. Ask the maintainer for the link. |
-| **A Linux server** (or Mac, or Windows with WSL2) with Docker Engine ≥ 24 and Docker Compose v2 | The whole stack is containerized. No host Node install needed. |
-| **2 GB RAM** minimum, 1 vCPU is enough | The bot is ~110 MB, dashboard is static, notifier is tiny. |
-| **A GRVT API key + secret + sub-account id** | Generate from grvt.io → Account → API Keys |
-| **(Optional) A domain name pointed at your server** | Required only if you want HTTPS via Caddy. Without a domain, you can still access the dashboard locally or over a VPN. |
-| **(Optional) A Telegram bot token + chat id** | For notifications. Skip with empty values if you don't want them. |
+| **Una cuenta de GRVT registrada mediante el enlace de referido del proyecto** | Necesaria para obtener acceso al repositorio y para mantener el proyecto sostenible. Pide el enlace al mantenedor. |
+| **Un servidor Linux** (o Mac, o Windows con WSL2) con Docker Engine ≥ 24 y Docker Compose v2 | Todo el stack está en contenedores. No hace falta instalar Node en el host. |
+| **2 GB de RAM** mínimo, 1 vCPU es suficiente | El bot ocupa ~110 MB, el dashboard es estático, el notifier es minúsculo. |
+| **Una clave de API + secreto + id de subcuenta de GRVT** | Genéralos en grvt.io → Account → API Keys |
+| **(Opcional) Un nombre de dominio apuntando a tu servidor** | Solo necesario si quieres HTTPS vía Caddy. Sin dominio, igual puedes acceder al dashboard localmente o por VPN. |
+| **(Opcional) Un token de bot de Telegram + chat id** | Para notificaciones. Omítelo con valores vacíos si no las quieres. |
 
-## Quick install (5 minutes)
+## Instalación rápida (5 minutos)
 
 ```bash
-# 1. Clone the private repo (you need access — contact maintainer)
+# 1. Clona el repo privado (necesitas acceso — contacta al mantenedor)
 git clone https://github.com/<owner>/grvt-grid.git
 cd grvt-grid
 
-# 2. Run the interactive installer
+# 2. Ejecuta el instalador interactivo
 ./scripts/install.sh
 ```
 
-The installer will:
-1. Check Docker is installed and running
-2. Generate a fresh `DASHBOARD_API_KEY`
-3. Prompt you for GRVT credentials (and Telegram if you want notifications)
-4. Build the Docker images
-5. Start the stack
-6. Wait for the bot's health check to pass
-7. Print the dashboard URL and API key
+El instalador hará lo siguiente:
+1. Comprobar que Docker está instalado y en ejecución
+2. Generar una `DASHBOARD_API_KEY` nueva
+3. Pedirte las credenciales de GRVT (y de Telegram si quieres notificaciones)
+4. Construir las imágenes de Docker
+5. Arrancar el stack
+6. Esperar a que pase el health check del bot
+7. Imprimir la URL del dashboard y la clave de API
 
-When it's done, open the printed URL, enter the API key when prompted by
-the dashboard, and your bot will appear in the Overview.
+Cuando termine, abre la URL impresa, introduce la clave de API cuando el
+dashboard te la pida, y tu bot aparecerá en el Resumen (Overview).
 
-## Manual install (if you want to skip the installer)
+## Instalación manual (si quieres saltarte el instalador)
 
 ```bash
 git clone https://github.com/<owner>/grvt-grid.git
 cd grvt-grid
 
-# 1. Create .env from the template and fill in your credentials
+# 1. Crea .env a partir de la plantilla y completa tus credenciales
 cp .env.example .env
 chmod 600 .env
-# Edit .env with your GRVT API keys, etc.
+# Edita .env con tus claves de API de GRVT, etc.
 
-# 2. Build and start
+# 2. Construye y arranca
 docker compose build
 docker compose up -d
 
-# 3. Watch the logs until you see "✅ Active bots loaded"
+# 3. Observa los logs hasta ver "✅ Active bots loaded"
 docker compose logs -f bot
 
-# 4. Open the dashboard
+# 4. Abre el dashboard
 open http://localhost:3848/dashboard/
 ```
 
-## Deployment profiles
+## Perfiles de despliegue
 
-`docker-compose.yml` defines three optional services controlled by Compose
-profiles:
+`docker-compose.yml` define tres servicios opcionales controlados por
+perfiles de Compose:
 
-| Profile | Includes | When to use |
+| Perfil | Incluye | Cuándo usarlo |
 |---|---|---|
-| _(default)_ | bot only | Local dev, behind a VPN, or you'll proxy from another reverse proxy |
-| `with-notifier` | bot + notifier | You want Telegram alerts |
-| `with-tls` | bot + caddy | You have a public domain and want HTTPS |
-| `full` | bot + notifier + caddy | Production self-host with everything |
+| _(por defecto)_ | solo bot | Desarrollo local, detrás de una VPN, o si harás proxy desde otro proxy inverso |
+| `with-notifier` | bot + notifier | Quieres alertas de Telegram |
+| `with-tls` | bot + caddy | Tienes un dominio público y quieres HTTPS |
+| `full` | bot + notifier + caddy | Autoalojamiento en producción con todo |
 
-To start with a profile:
+Para arrancar con un perfil:
 
 ```bash
 docker compose --profile full up -d
 ```
 
-## TLS setup (with-tls profile)
+## Configuración de TLS (perfil with-tls)
 
-1. Point an A record from your domain to your server's public IP.
-2. Edit `Caddyfile`: replace `your-domain.example.com` with your domain.
-3. Open ports 80 and 443 on your server's firewall.
+1. Apunta un registro A desde tu dominio a la IP pública de tu servidor.
+2. Edita `Caddyfile`: reemplaza `your-domain.example.com` por tu dominio.
+3. Abre los puertos 80 y 443 en el firewall de tu servidor.
 4. `docker compose --profile with-tls up -d`
-5. Caddy will automatically obtain a Let's Encrypt cert in ~30 seconds.
-6. Open `https://your-domain/dashboard/`.
+5. Caddy obtendrá automáticamente un certificado de Let's Encrypt en ~30 segundos.
+6. Abre `https://your-domain/dashboard/`.
 
-## Stopping safely
+## Detener de forma segura
 
-The bot installs a SIGTERM handler that **does not cancel any open GRVT
-orders** when it stops. So:
+El bot instala un manejador de SIGTERM que **no cancela ninguna orden
+abierta en GRVT** cuando se detiene. Así que:
 
 ```bash
-# Safe — preserves the 93 (or however many) limit orders on GRVT
+# Seguro — preserva las 93 (o las que sean) órdenes límite en GRVT
 docker compose stop bot
 
-# Also safe — same thing then removes the container
+# También seguro — lo mismo y luego elimina el contenedor
 docker compose down
 
-# Also safe (full restart, keeps orders intact)
+# También seguro (reinicio completo, mantiene las órdenes intactas)
 docker compose restart bot
 ```
 
-What you should NOT do:
+Lo que NO deberías hacer:
 
 ```bash
-# DON'T — sends SIGKILL, no graceful shutdown. Orders are still on GRVT
-# (the bot doesn't actively cancel them on signal anyway), but you lose
-# any in-flight DB writes and the bot might miss the latest fills on next
-# boot.
+# NO — envía SIGKILL, sin apagado ordenado. Las órdenes siguen en GRVT
+# (el bot no las cancela activamente al recibir la señal de todos modos),
+# pero pierdes cualquier escritura en la BD en curso y el bot podría
+# perderse las últimas ejecuciones en el siguiente arranque.
 docker kill grvt-grid-bot
 ```
 
 ## Backups
 
-The bot's SQLite database lives at `./data/grid_bot.db` on the host. WAL
-files (`*.db-wal`, `*.db-shm`) live next to it. Back the whole `data/`
-directory up nightly to somewhere off-host:
+La base de datos SQLite del bot vive en `./data/grid_bot.db` en el host.
+Los archivos WAL (`*.db-wal`, `*.db-shm`) viven junto a ella. Respalda todo
+el directorio `data/` cada noche en algún lugar fuera del host:
 
 ```bash
-# Example: cron job that pushes a daily snapshot to S3 / Backblaze / etc.
+# Ejemplo: cron job que envía una instantánea diaria a S3 / Backblaze / etc.
 0 3 * * * cd /opt/grvt-grid && tar czf - data | rclone rcat \
     remote:grvt-grid-backups/$(date +\%F).tar.gz
 ```
 
-## Updating
+## Actualizar
 
 ```bash
 cd /opt/grvt-grid
 git pull
 docker compose build
-docker compose up -d   # rolling restart, preserves data dir
+docker compose up -d   # reinicio progresivo, preserva el directorio data
 ```
 
-The bot's SQLite migrations run automatically on boot.
+Las migraciones de SQLite del bot se ejecutan automáticamente al arrancar.
 
-## Troubleshooting
+## Resolución de problemas
 
 ### "Bot did not become healthy"
 
-Check the logs:
+Revisa los logs:
 
 ```bash
 docker compose logs -f bot
 ```
 
-Common causes:
-- **GRVT_API_KEY / SECRET wrong**: you'll see authentication errors in the
-  logs. Re-check the values in `.env`.
-- **GRVT account not funded**: the bot won't start trading on a zero balance,
-  but health check should still pass. If not, check your sub-account id.
-- **Port 3848 already in use**: change `BOT_PORT` in `.env`.
+Causas comunes:
+- **GRVT_API_KEY / SECRET incorrectos**: verás errores de autenticación en
+  los logs. Vuelve a comprobar los valores en `.env`.
+- **Cuenta de GRVT sin fondos**: el bot no empezará a operar con saldo cero,
+  pero el health check debería pasar igual. Si no, revisa el id de tu
+  subcuenta.
+- **Puerto 3848 ya en uso**: cambia `BOT_PORT` en `.env`.
 
-### Dashboard says "GRVT session expired"
+### El dashboard dice "GRVT session expired"
 
-Your API key was rotated on grvt.io. Update `GRVT_API_KEY` and
-`GRVT_API_SECRET` in `.env`, then `docker compose restart bot`.
+Tu clave de API fue rotada en grvt.io. Actualiza `GRVT_API_KEY` y
+`GRVT_API_SECRET` en `.env`, luego `docker compose restart bot`.
 
-### Notifier sends a flood of historical fills on first start
+### El notifier envía una avalancha de ejecuciones históricas al primer arranque
 
-Shouldn't happen — the notifier fast-forwards its cursor on bootstrap. If
-it does, stop the notifier, delete its state volume:
+No debería ocurrir — el notifier adelanta su cursor en el arranque. Si
+ocurre, detén el notifier y elimina su volumen de estado:
 
 ```bash
 docker compose stop notifier
@@ -169,32 +170,33 @@ docker volume rm grvt-grid_notifier-state
 docker compose start notifier
 ```
 
-## Security checklist
+## Lista de verificación de seguridad
 
-Before you point a domain at this and walk away:
+Antes de apuntar un dominio a esto y marcharte:
 
-- [ ] `.env` permissions are `600` (the installer sets this; verify with `ls -la .env`)
-- [ ] `DASHBOARD_API_KEY` is at least 32 chars (the installer generates 64)
-- [ ] You're using the `with-tls` profile (or fronted with another HTTPS proxy)
-- [ ] Your server's firewall blocks port 3848 from the public internet (Caddy
-      proxies via the docker network — only 80/443 should be public)
-- [ ] You've set up nightly backups of `./data/`
-- [ ] You're not running the legacy basic auth dashboard (just remove
-      `DASHBOARD_USER` / `DASHBOARD_PASS` from `.env` if you don't need it)
-- [ ] Your GRVT API key is scoped to the trading sub-account only — not the
-      master account with withdrawal permissions
+- [ ] Los permisos de `.env` son `600` (el instalador lo configura; verifícalo con `ls -la .env`)
+- [ ] `DASHBOARD_API_KEY` tiene al menos 32 caracteres (el instalador genera 64)
+- [ ] Estás usando el perfil `with-tls` (o tienes otro proxy HTTPS por delante)
+- [ ] El firewall de tu servidor bloquea el puerto 3848 desde la internet
+      pública (Caddy hace de proxy vía la red de docker — solo 80/443 deberían
+      ser públicos)
+- [ ] Has configurado backups nocturnos de `./data/`
+- [ ] No estás ejecutando el dashboard heredado con basic auth (simplemente
+      elimina `DASHBOARD_USER` / `DASHBOARD_PASS` de `.env` si no lo necesitas)
+- [ ] Tu clave de API de GRVT tiene alcance solo a la subcuenta de trading —
+      no a la cuenta maestra con permisos de retiro
 
-## Where things live
+## Dónde vive cada cosa
 
 ```
 /opt/grvt-grid/
-├── data/                         ← SQLite db (bind mount)
+├── data/                         ← BD SQLite (bind mount)
 │   ├── grid_bot.db
 │   ├── grid_bot.db-wal
 │   └── grid_bot.db-shm
 ├── logs/
-│   ├── bot/                      ← bot stdout
-│   └── notifier/                 ← notifier stdout
-├── .env                          ← your secrets
+│   ├── bot/                      ← stdout del bot
+│   └── notifier/                 ← stdout del notifier
+├── .env                          ← tus secretos
 └── docker-compose.yml
 ```

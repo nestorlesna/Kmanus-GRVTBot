@@ -1,26 +1,28 @@
 # GRVT Grid
 
-Multi-user grid trading bot for the [GRVT](https://grvt.io) perpetual
-futures exchange. Self-hostable, AGPL-licensed, with a real-time web
-dashboard, Telegram alerts, and per-user encrypted API credentials.
+Bot de trading de grilla multiusuario para el exchange de futuros
+perpetuos [GRVT](https://grvt.io). Autoalojable, con licencia AGPL, con un
+dashboard web en tiempo real, alertas de Telegram y credenciales de API
+cifradas por usuario.
 
-There is also a hosted instance at **[grvtbot.com](https://grvtbot.com)**
-— it runs the exact code in this repo. You don't have to host your own
-to use it.
+También hay una instancia alojada en **[grvtbot.com](https://grvtbot.com)**
+— ejecuta exactamente el código de este repositorio. No tienes que alojar
+tu propia copia para usarlo.
 
-## Use it
+## Cómo usarlo
 
-**Option 1 — Use the hosted instance** at
-[grvtbot.com](https://grvtbot.com). Create an account, paste your GRVT
-API credentials (encrypted at rest with AES-256-GCM), configure a grid,
-and the bot trades on your sub-account 24/7. The operator does not
-touch your funds. See [SECURITY.md](SECURITY.md) for the exact threat
-model — short version: the operator technically can decrypt your
-credentials because the master key lives on the same server. If you
-want zero third-party access to your keys, use Option 2.
+**Opción 1 — Usa la instancia alojada** en
+[grvtbot.com](https://grvtbot.com). Crea una cuenta, pega tus
+credenciales de API de GRVT (cifradas en reposo con AES-256-GCM),
+configura una grilla y el bot operará en tu subcuenta 24/7. El operador
+no toca tus fondos. Consulta [SECURITY.md](SECURITY.md) para el modelo de
+amenazas exacto — en resumen: el operador técnicamente puede descifrar
+tus credenciales porque la clave maestra reside en el mismo servidor. Si
+quieres que ningún tercero tenga acceso a tus claves, usa la Opción 2.
 
-**Option 2 — Self-host your own copy**. See
-[docs/INSTALL.md](docs/INSTALL.md) for the full setup. Quick version:
+**Opción 2 — Aloja tu propia copia**. Consulta
+[docs/INSTALL.md](docs/INSTALL.md) para la configuración completa. Versión
+rápida:
 
 ```bash
 git clone https://github.com/kmanus88/GRVTBot.git
@@ -28,78 +30,84 @@ cd GRVTBot
 npm install
 npm run build
 
-# generate the encryption master key (32 random bytes, file 0600)
+# genera la clave maestra de cifrado (32 bytes aleatorios, archivo 0600)
 sudo mkdir -p /etc/grvt-grid
 sudo sh -c 'head -c 32 /dev/urandom > /etc/grvt-grid/master.key'
 sudo chmod 600 /etc/grvt-grid/master.key
 
-# copy + fill the example env (you supply your own GRVT API creds, SMTP,
-# JWT_SECRET, etc. — see packages/bot/.env.example for every field)
+# copia + completa el env de ejemplo (tú aportas tus propias credenciales de
+# API de GRVT, SMTP, JWT_SECRET, etc. — consulta packages/bot/.env.example
+# para cada campo)
 cp packages/bot/.env.example packages/bot/.env
 
-# run the bot (production runs it under systemd — see docs/INSTALL.md)
+# ejecuta el bot (en producción corre bajo systemd — ver docs/INSTALL.md)
 node packages/bot/dist/dashboard/server.js
 ```
 
-## What it does
+## Qué hace
 
-- **Grid trading**: defines a price range and N levels, places buy/sell
-  limit orders at every level, replaces fills automatically. Supports
-  range update, compounding, stop-loss / take-profit, safeguard pauses,
-  auto-shift, and backtesting.
-- **Per-bot virtual grid**: configure a wider range than what fits in
-  GRVT's 80-order-per-instrument limit; the bot keeps an active window
-  of orders around the current price and shifts as price moves.
-- **Multi-user, multi-bot**: every user signs up with their own GRVT
-  credentials and runs their own bots in isolation. No data leaks
-  between tenants.
-- **Real-time dashboard**: equity curve, per-bot stats, fills, position,
-  PnL, alerts. WebSocket-driven so updates appear without a refresh.
-- **Telegram alerts** (optional): batched fills, drawdown warnings,
-  liquidation-proximity warnings, daily summary.
+- **Trading de grilla**: define un rango de precios y N niveles, coloca
+  órdenes límite de compra/venta en cada nivel y repone las ejecuciones
+  automáticamente. Soporta actualización de rango, capitalización
+  compuesta, stop-loss / take-profit, pausas de seguridad, auto-shift y
+  backtesting.
+- **Grilla virtual por bot**: configura un rango más amplio que el que
+  cabe en el límite de GRVT de 80 órdenes por instrumento; el bot
+  mantiene una ventana activa de órdenes alrededor del precio actual y se
+  desplaza a medida que el precio se mueve.
+- **Multiusuario, multibot**: cada usuario se registra con sus propias
+  credenciales de GRVT y ejecuta sus propios bots de forma aislada. No
+  hay fuga de datos entre inquilinos (tenants).
+- **Dashboard en tiempo real**: curva de equity, estadísticas por bot,
+  ejecuciones, posición, PnL, alertas. Impulsado por WebSocket, así que
+  las actualizaciones aparecen sin recargar.
+- **Alertas de Telegram** (opcional): ejecuciones agrupadas, avisos de
+  drawdown, avisos de proximidad a liquidación, resumen diario.
 
-## Architecture
+## Arquitectura
 
 ```
 packages/
-  bot/        Engine + REST API + WebSocket server (Node, TypeScript)
-  dashboard/  SPA frontend (Vite + React + Tailwind + Recharts)
-  notifier/   Standalone Telegram alerts worker
-scripts/      Backup + admin utilities
-docs/         Install, rollback, operational notes
+  bot/        Motor + API REST + servidor WebSocket (Node, TypeScript)
+  dashboard/  Frontend SPA (Vite + React + Tailwind + Recharts)
+  notifier/   Worker independiente de alertas de Telegram
+scripts/      Utilidades de backup + administración
+docs/         Instalación, rollback, notas operativas
 ```
 
-The bot process holds the GRVT WebSocket connection, runs the grid
-engine, and serves the REST/WS API. The dashboard is a static SPA the
-bot serves alongside the API. The notifier is an optional separate
-process that reads the bot's DB (read-only) and pushes alerts.
+El proceso del bot mantiene la conexión WebSocket con GRVT, ejecuta el
+motor de grilla y sirve la API REST/WS. El dashboard es una SPA estática
+que el bot sirve junto con la API. El notifier es un proceso separado
+opcional que lee la BD del bot (solo lectura) y envía las alertas.
 
-Data lives in SQLite at `data/grid_bot.db` (a single file). User
-passwords are bcrypt-hashed; GRVT credentials are AES-256-GCM encrypted
-with a key on disk. See [SECURITY.md](SECURITY.md).
+Los datos viven en SQLite en `data/grid_bot.db` (un único archivo). Las
+contraseñas de los usuarios se almacenan como hash bcrypt; las
+credenciales de GRVT se cifran con AES-256-GCM usando una clave en disco.
+Consulta [SECURITY.md](SECURITY.md).
 
-## Status
+## Estado
 
-In production. The hosted instance at
-[grvtbot.com](https://grvtbot.com) has been running real trades for
-months. Issues + PRs welcome.
+En producción. La instancia alojada en
+[grvtbot.com](https://grvtbot.com) lleva meses ejecutando operaciones
+reales. Issues y PRs son bienvenidos.
 
-## Contributing
+## Cómo contribuir
 
-Run `npm test` from the root — currently 208 tests across bot,
-dashboard, and notifier packages. PRs that add features should include
-tests; PRs that fix bugs should include a regression test.
+Ejecuta `npm test` desde la raíz — actualmente 208 tests entre los
+paquetes bot, dashboard y notifier. Los PRs que añadan funcionalidades
+deben incluir tests; los PRs que corrijan bugs deben incluir un test de
+regresión.
 
-## License
+## Licencia
 
-[AGPL-3.0-or-later](LICENSE). In short: you're free to use, modify, and
-self-host this code. **If you modify it AND run it as a network
-service, you must publish your modifications under the same license.**
-This is to keep forks and competing hosted instances in the open
-source.
+[AGPL-3.0-or-later](LICENSE). En resumen: eres libre de usar, modificar y
+autoalojar este código. **Si lo modificas Y lo ejecutas como un servicio
+de red, debes publicar tus modificaciones bajo la misma licencia.** Esto
+es para mantener los forks y las instancias alojadas competidoras en
+código abierto.
 
-## Security
+## Seguridad
 
-Vulnerability reports: **do not** open a public GitHub issue. See
-[SECURITY.md](SECURITY.md) for the reporting process and full threat
-model.
+Reportes de vulnerabilidades: **no** abras un issue público en GitHub.
+Consulta [SECURITY.md](SECURITY.md) para el proceso de reporte y el
+modelo de amenazas completo.

@@ -1,38 +1,38 @@
-# Connection Loss Behavior
+# Comportamiento ante pérdida de conexión
 
-What happens to your bot when the GRVT API becomes unreachable.
+Qué le pasa a tu bot cuando la API de GRVT se vuelve inalcanzable.
 
-## Short outage (<5 minutes)
+## Corte breve (<5 minutos)
 
-- **Open orders stay on GRVT.** The exchange holds them server-side — they don't depend on your bot being connected.
-- **Monitor loop errors are caught.** Each 5s tick that fails to reach GRVT logs an error and retries next tick. The bot does NOT pause or cancel orders.
-- **Fill detection pauses.** New fills won't be detected until connectivity returns. They are NOT lost — the next successful `getFillHistory` call picks up everything since the last poll.
-- **Funding polling pauses.** Same — catches up on reconnect.
-- **Dashboard shows stale data.** The health endpoint reports `status: degraded` (GRVT check fails, DB check passes).
+- **Las órdenes abiertas permanecen en GRVT.** El exchange las mantiene del lado del servidor — no dependen de que tu bot esté conectado.
+- **Los errores del bucle del monitor se capturan.** Cada tick de 5s que falla al alcanzar GRVT registra un error y reintenta en el siguiente tick. El bot NO pausa ni cancela órdenes.
+- **La detección de ejecuciones se pausa.** Las nuevas ejecuciones no se detectarán hasta que vuelva la conectividad. NO se pierden — la siguiente llamada exitosa a `getFillHistory` recupera todo lo ocurrido desde el último sondeo.
+- **El sondeo de funding se pausa.** Igual — se pone al día al reconectar.
+- **El dashboard muestra datos obsoletos.** El endpoint de salud reporta `status: degraded` (la comprobación de GRVT falla, la de la BD pasa).
 
-## Extended outage (5+ minutes)
+## Corte prolongado (5+ minutos)
 
-- **Same as above, but longer.** The bot keeps retrying every 5s indefinitely.
-- **No automatic pause.** The bot does NOT self-pause during a GRVT outage. Your orders stay live on the exchange. This is intentional: pausing would cancel all orders, which is worse than waiting for reconnect.
-- **Compound rebalance skips.** The hourly compound check fails silently and retries next hour.
-- **Notifier degrades.** Telegram alerts may fail (separate from GRVT, but if the VPS itself is down, everything stops).
+- **Igual que arriba, pero más tiempo.** El bot sigue reintentando cada 5s indefinidamente.
+- **Sin pausa automática.** El bot NO se autopausa durante un corte de GRVT. Tus órdenes siguen activas en el exchange. Esto es intencional: pausar cancelaría todas las órdenes, lo cual es peor que esperar la reconexión.
+- **El rebalanceo de capitalización compuesta se omite.** La comprobación horaria de capitalización falla silenciosamente y reintenta a la hora siguiente.
+- **El notifier se degrada.** Las alertas de Telegram pueden fallar (es independiente de GRVT, pero si el propio VPS está caído, todo se detiene).
 
-## What does NOT happen
+## Qué NO ocurre
 
-- ❌ Orders are NOT cancelled during an outage.
-- ❌ The bot does NOT close your position.
-- ❌ No data is lost — fills, funding, and roundtrips catch up on reconnect.
-- ❌ The safeguard (C.4) does NOT trigger on connection loss — it only triggers on price proximity to liquidation, which requires a successful ticker read.
+- ❌ Las órdenes NO se cancelan durante un corte.
+- ❌ El bot NO cierra tu posición.
+- ❌ No se pierden datos — las ejecuciones, el funding y los roundtrips se ponen al día al reconectar.
+- ❌ La salvaguarda (C.4) NO se dispara por pérdida de conexión — solo se dispara por la proximidad del precio a la liquidación, lo que requiere una lectura exitosa del ticker.
 
-## Process crash / restart
+## Caída / reinicio del proceso
 
-- **SIGTERM (systemd restart):** Graceful shutdown — drains in-flight tasks, preserves orders on GRVT, closes DB cleanly. Orders survive the restart.
-- **SIGINT (Ctrl+C):** Cancels all orders, pauses bots, closes DB. Use only in development.
-- **Kill -9 / OOM:** Ungraceful — orders stay on GRVT (they're server-side), but the DB may need WAL recovery on next start (SQLite handles this automatically).
+- **SIGTERM (reinicio de systemd):** Apagado ordenado — drena las tareas en curso, preserva las órdenes en GRVT, cierra la BD limpiamente. Las órdenes sobreviven al reinicio.
+- **SIGINT (Ctrl+C):** Cancela todas las órdenes, pausa los bots, cierra la BD. Úsalo solo en desarrollo.
+- **Kill -9 / OOM:** No ordenado — las órdenes permanecen en GRVT (están del lado del servidor), pero la BD puede necesitar recuperación del WAL en el siguiente arranque (SQLite lo maneja automáticamente).
 
-## Recommendations
+## Recomendaciones
 
-1. **Don't panic during outages.** Your orders are safe on GRVT.
-2. **Check the health endpoint** (`/api/v2/health`) to see if it's a GRVT issue or a local issue.
-3. **Set up the notifier** with Telegram — it will alert you on status changes and drawdown events.
-4. **Enable automated backups** (`scripts/backup.sh` via cron) so a catastrophic DB loss doesn't mean total data loss.
+1. **No entres en pánico durante los cortes.** Tus órdenes están a salvo en GRVT.
+2. **Comprueba el endpoint de salud** (`/api/v2/health`) para ver si es un problema de GRVT o un problema local.
+3. **Configura el notifier** con Telegram — te alertará ante cambios de estado y eventos de drawdown.
+4. **Habilita los backups automatizados** (`scripts/backup.sh` vía cron) para que una pérdida catastrófica de la BD no signifique la pérdida total de datos.

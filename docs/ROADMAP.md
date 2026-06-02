@@ -1,94 +1,94 @@
-# GRVT Grid — Roadmap
+# GRVT Grid — Hoja de ruta
 
-> **Last updated**: 2026-04-25
-> **Current state**: Phases A-H complete. Bots running in production (ETH 10x + SOL virtual grids 10x). Phase I (Lumina) paused.
-
----
-
-## Completed
-
-### Phase A — Grid Engine ✅
-Core grid trading engine on GRVT perpetual futures. LONG/SHORT strategies, post-only orders with retry, fill deduplication, rate-limit handling.
-
-### Phase B — Dashboard + Multi-Tenancy ✅
-Full SPA (Vite + React + Tailwind + shadcn). GridChart with candle + grid overlays, equity curve, sparklines, 4-step create-bot wizard, live range update with preview, compound rebalancing, roundtrip tracking via FIFO fill pairing, multi-tenant auth (JWT + encrypted credentials), Docker self-host kit, Telegram notifier, light/dark theme.
-
-### Phase C — Hardening & Reliability ✅
-All 10/10 deployed. Structured logging (pino), per-user GRVT clients, liquidation safeguard, graceful shutdown, deep health check, pagination, processedFills pruning, one-bot-per-instrument guard, notifier health.
-
-### Phase D — Test Suite (partial)
-- D.2 + D.3 deployed (58 tests covering REST API + grid calculation).
-- D.1, D.4-D.9 still pending (see below).
-
-### Phase E — Dashboard Polish ✅
-E.1-E.9 done. E.9 (password recovery) ships SMTP-based reset with optional config — if SMTP env vars are blank, reset URL is logged at WARN for out-of-band delivery so self-host without SMTP still works.
-
-### Phase F — Notifications & Alerting ✅ (5/6)
-F.1-F.4 + F.6 deployed: per-bot thresholds, liq proximity, webhook sink, muted hours, alert history. **F.5 (email) skipped — Telegram is sufficient for current users**.
-
-### Phase G — Operations & Monitoring ✅
-All 6/6 deployed: Prometheus metrics, Grafana template, automated backups, rollback docs, log rotation, connection-loss docs.
-
-### Phase H — Advanced Trading ✅
-- **H.2 — Dynamic grid (auto-shift)**: opt-in per bot. When mark price exits the range by >= `auto_shift_pct` of range width, monitor sets `autoShiftRequested`; the engine handler re-centers the range on current price (same width) by reusing `updateBotRange()`. Rate-limited to once per hour via persisted `last_auto_shift_at`. Emits `autoShifted` event → WS notification. Dashboard shows status card on bot detail when enabled.
-- **H.3 — Stop-loss / take-profit**: opt-in per bot via `sl_pct`/`tp_pct` (% of `investment_usdt`). Engine throws `SAFEGUARD:pause_close` when crossed; `monitorAllBots` catches and routes to `closeBot`. Dashboard exposes editable card on bot detail (PATCH `/bots/:id/risk`) — clearing the field disables the guard. Critical bug fix shipped: previous `updatePnL` catch silently swallowed the SAFEGUARD throw, so SL/TP never fired.
-- **H.8 — Virtual Grids**: user can configure up to 500 grid levels; engine maintains an "active window" of N closest-to-price levels (default 70, max 80 = GRVT cap minus margin) with the rest as `state='virtual'`. Window rotates as price moves: closer levels activate, farther ones get cancelled and demoted. Initial purchase counts ALL sell levels (incl virtuals) so backing is correct from day one. Schema: `grid_bots.virtual_enabled`, `grid_bots.active_window_size`, `grid_levels.state`.
-- Dashboard: virtual levels render as dotted muted lines on the chart, stats strip shows `N active · M virtual · K filled`, "VIRTUAL" entry in chart legend.
-
-### Profit audit + unification ✅ (2026-04-14)
-`paired_roundtrips.bot_id` added with backfill; single source of truth for grid profit (`SUM(profit) - SUM(fees)`); fixed cross-bot contamination.
-
-### Critical fixes (2026-04-25)
-- **Grid-coverage tolerance bug**: monitor's match tolerance was hardcoded `< 0.5` USD. With $0.25 grid step on SOL bot, a single GRVT order aliased to two adjacent DB levels → loser got re-placed → duplicates. Fixed: `matchTolerance = min(0.05, gridStep / 3)` per bot.
-- **Dup killer hardening**: threshold tightened from `active_window_size` to actual `expectedActiveLevels.length`. Added orphan detection that cancels GRVT orders whose price doesn't match any expected DB level.
-- **Fill detection**: monitor now checks both REST `getFillHistory` AND local WS-backed `fills_archive` before the 10s GRVT-lag skip — catches aggressive-candle fills inside the skip window.
-- **Bootstrap race conditions**: `bootstrapInProgress` + `bootstrapAbort` flags, gap-level marking at open, removed redundant SELL placement.
-- **Server access**: root `/` redirects to `/dashboard/`, basic auth skipped for SPA paths (the v2 app has its own JWT login).
+> **Última actualización**: 2026-04-25
+> **Estado actual**: Fases A-H completadas. Bots en producción (grillas ETH 10x + SOL virtual 10x). Fase I (Lumina) en pausa.
 
 ---
 
-## Pending
+## Completado
 
-### Phase D (remaining)
-| # | Task | Scope | Est |
+### Fase A — Motor de grilla ✅
+Motor principal de trading de grilla sobre futuros perpetuos de GRVT. Estrategias LONG/SHORT, órdenes post-only con reintento, deduplicación de ejecuciones, manejo de rate-limit.
+
+### Fase B — Dashboard + Multiinquilino ✅
+SPA completa (Vite + React + Tailwind + shadcn). GridChart con superposiciones de velas + grilla, curva de equity, sparklines, asistente de creación de bot en 4 pasos, actualización de rango en vivo con vista previa, rebalanceo de capitalización compuesta, seguimiento de roundtrips mediante emparejamiento FIFO de ejecuciones, autenticación multiinquilino (JWT + credenciales cifradas), kit de autoalojamiento con Docker, notifier de Telegram, tema claro/oscuro.
+
+### Fase C — Endurecimiento y fiabilidad ✅
+Los 10/10 desplegados. Logging estructurado (pino), clientes de GRVT por usuario, salvaguarda de liquidación, apagado ordenado, health check profundo, paginación, poda de processedFills, protección de un-bot-por-instrumento, salud del notifier.
+
+### Fase D — Suite de tests (parcial)
+- D.2 + D.3 desplegados (58 tests que cubren la API REST + cálculo de grilla).
+- D.1, D.4-D.9 aún pendientes (ver más abajo).
+
+### Fase E — Pulido del dashboard ✅
+E.1-E.9 hechos. E.9 (recuperación de contraseña) incluye reset basado en SMTP con configuración opcional — si las variables de entorno de SMTP están vacías, la URL de reset se registra a nivel WARN para entrega fuera de banda, así el autoalojamiento sin SMTP sigue funcionando.
+
+### Fase F — Notificaciones y alertas ✅ (5/6)
+F.1-F.4 + F.6 desplegados: umbrales por bot, proximidad de liquidación, sink de webhook, horas silenciadas, historial de alertas. **F.5 (email) omitido — Telegram es suficiente para los usuarios actuales**.
+
+### Fase G — Operaciones y monitoreo ✅
+Los 6/6 desplegados: métricas de Prometheus, plantilla de Grafana, backups automatizados, documentación de rollback, rotación de logs, documentación de pérdida de conexión.
+
+### Fase H — Trading avanzado ✅
+- **H.2 — Grilla dinámica (auto-shift)**: opt-in por bot. Cuando el precio mark sale del rango en >= `auto_shift_pct` del ancho del rango, el monitor establece `autoShiftRequested`; el manejador del motor recentra el rango sobre el precio actual (mismo ancho) reutilizando `updateBotRange()`. Limitado a una vez por hora mediante `last_auto_shift_at` persistido. Emite el evento `autoShifted` → notificación WS. El dashboard muestra una tarjeta de estado en el detalle del bot cuando está habilitado.
+- **H.3 — Stop-loss / take-profit**: opt-in por bot vía `sl_pct`/`tp_pct` (% de `investment_usdt`). El motor lanza `SAFEGUARD:pause_close` al cruzarse; `monitorAllBots` lo captura y lo enruta a `closeBot`. El dashboard expone una tarjeta editable en el detalle del bot (PATCH `/bots/:id/risk`) — vaciar el campo desactiva la salvaguarda. Corrección de bug crítico desplegada: el catch previo de `updatePnL` se tragaba silenciosamente el throw de SAFEGUARD, así que el SL/TP nunca se disparaba.
+- **H.8 — Grillas virtuales**: el usuario puede configurar hasta 500 niveles de grilla; el motor mantiene una "ventana activa" de los N niveles más cercanos al precio (por defecto 70, máx 80 = el límite de GRVT menos margen) con el resto como `state='virtual'`. La ventana rota a medida que el precio se mueve: los niveles más cercanos se activan, los más lejanos se cancelan y degradan. La compra inicial cuenta TODOS los niveles de venta (incl. virtuales) para que el respaldo sea correcto desde el día uno. Esquema: `grid_bots.virtual_enabled`, `grid_bots.active_window_size`, `grid_levels.state`.
+- Dashboard: los niveles virtuales se renderizan como líneas punteadas atenuadas en el gráfico, la franja de estadísticas muestra `N active · M virtual · K filled`, entrada "VIRTUAL" en la leyenda del gráfico.
+
+### Auditoría de beneficios + unificación ✅ (2026-04-14)
+Se añadió `paired_roundtrips.bot_id` con backfill; única fuente de verdad para el beneficio de la grilla (`SUM(profit) - SUM(fees)`); se corrigió la contaminación entre bots.
+
+### Correcciones críticas (2026-04-25)
+- **Bug de tolerancia de cobertura de grilla**: la tolerancia de coincidencia del monitor estaba hardcodeada a `< 0.5` USD. Con un paso de grilla de $0.25 en el bot de SOL, una sola orden de GRVT se asociaba (aliasing) a dos niveles adyacentes de la BD → el perdedor se reponía → duplicados. Corregido: `matchTolerance = min(0.05, gridStep / 3)` por bot.
+- **Endurecimiento del eliminador de duplicados**: el umbral se ajustó de `active_window_size` a la `expectedActiveLevels.length` real. Se añadió detección de huérfanos que cancela órdenes de GRVT cuyo precio no coincide con ningún nivel esperado de la BD.
+- **Detección de ejecuciones**: el monitor ahora comprueba tanto `getFillHistory` por REST COMO el `fills_archive` local respaldado por WS antes del salto de 10s por el lag de GRVT — captura ejecuciones de velas agresivas dentro de la ventana de salto.
+- **Condiciones de carrera en el arranque**: flags `bootstrapInProgress` + `bootstrapAbort`, marcado de niveles de hueco (gap) al abrir, eliminación de colocación redundante de SELL.
+- **Acceso al servidor**: la raíz `/` redirige a `/dashboard/`, se omite basic auth para las rutas de la SPA (la app v2 tiene su propio login JWT).
+
+---
+
+## Pendiente
+
+### Fase D (restante)
+| # | Tarea | Alcance | Est. |
 |---|------|-------|-----|
-| D.1 | Bot lifecycle integration test | `tests/integration/` | 2h |
-| D.4 | Compound rebalance tests | `tests/grid-engine.test.ts` | 1h |
-| D.5 | Range update tests | `tests/range-update.test.ts` | 2h |
-| D.6 | DB migration tests | `tests/db.test.ts` | 1h |
-| D.7 | Notifier tests | `packages/notifier/tests/` | 1h |
-| D.8 | Dashboard component tests | `packages/dashboard/tests/` | 2h |
-| D.9 | WebSocket tests | `tests/ws.test.ts` | 1h |
+| D.1 | Test de integración del ciclo de vida del bot | `tests/integration/` | 2h |
+| D.4 | Tests de rebalanceo de capitalización compuesta | `tests/grid-engine.test.ts` | 1h |
+| D.5 | Tests de actualización de rango | `tests/range-update.test.ts` | 2h |
+| D.6 | Tests de migración de BD | `tests/db.test.ts` | 1h |
+| D.7 | Tests del notifier | `packages/notifier/tests/` | 1h |
+| D.8 | Tests de componentes del dashboard | `packages/dashboard/tests/` | 2h |
+| D.9 | Tests de WebSocket | `tests/ws.test.ts` | 1h |
 
-### Phase H (next-gen, all new)
-| # | Task | Why | Est |
+### Fase H (nueva generación, todo nuevo)
+| # | Tarea | Por qué | Est. |
 |---|------|-----|-----|
-| H.5 | **Multi-sub-account** — connect multiple GRVT sub-accounts, run bots on each | Power-user isolation between strategies | 3h |
-| H.6 | **Backtesting** — simulate grid on historical candles | Test parameters before risking capital | 8h |
-| H.7 | **Portfolio view** — aggregate equity / PnL / risk across all bots | Overview lacks aggregate stats | 3h |
+| H.5 | **Multi-subcuenta** — conectar múltiples subcuentas de GRVT, ejecutar bots en cada una | Aislamiento entre estrategias para usuarios avanzados | 3h |
+| H.6 | **Backtesting** — simular la grilla sobre velas históricas | Probar parámetros antes de arriesgar capital | 8h |
+| H.7 | **Vista de cartera** — equity / PnL / riesgo agregados entre todos los bots | El resumen carece de estadísticas agregadas | 3h |
 
-### Phase I — Lumina Insurance Integration (paused)
-Plan exists at `~/.claude/plans/effervescent-sparking-lamport.md`. Deferred until Lumina vaults have non-zero TVL and/or a GRVT-specific product exists. Flash Insurance economics don't close yet for small-capital bots at low leverage.
-
----
-
-## Priority order (recommended next)
-
-```
-1. H.5 — Multi-sub-account       (~3h, schema ready)
-2. H.7 — Portfolio view          (~3h, lifts overview UX)
-3. D remainders                  (~10h, test coverage)
-4. H.6 — Backtesting             (~8h, big feature)
-```
-
-Phase I (Lumina) waits for protocol maturity. No work scheduled.
+### Fase I — Integración de seguro Lumina (en pausa)
+Existe un plan en `~/.claude/plans/effervescent-sparking-lamport.md`. Diferido hasta que las bóvedas de Lumina tengan un TVL distinto de cero y/o exista un producto específico para GRVT. La economía del Flash Insurance aún no cierra para bots de poco capital a bajo apalancamiento.
 
 ---
 
-## Production state (Apr 25)
+## Orden de prioridad (próximo recomendado)
 
-- **Bot 44**: ETH_USDT_Perp · LONG · 10x · 94 grids · realized $53+ · running
-- **Bot 48**: SOL_USDT_Perp · LONG · 10x · 120 virtual grids (window 70) · $100 invested · running
-- **Hosting**: self-managed VPS behind Caddy reverse proxy + Let's Encrypt TLS
-- **DB**: SQLite WAL stored under the bot package's `data/` dir (`$GRID_BOT_DB`)
-- Services: systemd units `grvt-grid-bot.service` + `grvt-grid-notifier.service` running as a dedicated unprivileged user
+```
+1. H.5 — Multi-subcuenta          (~3h, esquema listo)
+2. H.7 — Vista de cartera         (~3h, mejora la UX del resumen)
+3. Restantes de D                 (~10h, cobertura de tests)
+4. H.6 — Backtesting              (~8h, funcionalidad grande)
+```
+
+La Fase I (Lumina) espera la madurez del protocolo. Sin trabajo programado.
+
+---
+
+## Estado de producción (25 abr)
+
+- **Bot 44**: ETH_USDT_Perp · LONG · 10x · 94 grillas · realizado $53+ · en ejecución
+- **Bot 48**: SOL_USDT_Perp · LONG · 10x · 120 grillas virtuales (ventana 70) · $100 invertidos · en ejecución
+- **Hosting**: VPS autogestionado detrás de un proxy inverso Caddy + TLS de Let's Encrypt
+- **BD**: SQLite WAL almacenada bajo el directorio `data/` del paquete del bot (`$GRID_BOT_DB`)
+- Servicios: unidades systemd `grvt-grid-bot.service` + `grvt-grid-notifier.service` ejecutándose como un usuario dedicado sin privilegios
